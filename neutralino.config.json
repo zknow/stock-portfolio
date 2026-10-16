@@ -1,0 +1,43 @@
+{
+  "applicationId": "com.gzchen.stockportfolio",
+  "version": "0.1.0",
+  "defaultMode": "window",
+  "documentRoot": "/build/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "dataLocation": "app",
+  "nativeAllowList": [
+    "app.*",
+    "window.*",
+    "os.*",
+    "filesystem.*",
+    "net.*"
+  ],
+  "modes": {
+    "window": {
+      "title": "台股庫存",
+      "width": 1100,
+      "height": 760,
+      "minWidth": 700,
+      "minHeight": 480,
+      "resizable": true,
+      "center": true,
+      "useSavedState": false,
+      "injectGlobals": true,
+      "icon": "/build/icons/appIcon.png"
+    }
+  },
+  "cli": {
+    "binaryName": "stock-portfolio",
+    "binaryVersion": "6.10.0",
+    "resourcesPath": "/build/",
+    "frontendLibrary": {
+      "devUrl": "http://localhost:5173",
+      "projectPath": "/",
+      "initCommand": "npm install",
+      "devCommand": "npm run dev",
+      "buildCommand": "npm run build"
+    }
+  }
+}

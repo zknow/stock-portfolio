@@ -1,0 +1,24 @@
+# 依賴
+node_modules/
+
+# 建置產物
+build/
+dist/
+bin/
+
+# Neutralino 執行期
+.storage/
+.tmp/
+*.neu
+
+# 日誌
+logs/
+*.log
+
+# 個人資料
+config/portfolio.json
+config/symbols.json
+
+# 編輯器
+.vscode/
+.idea/

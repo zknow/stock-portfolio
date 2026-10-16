@@ -1,0 +1,257 @@
+/* 台股庫存 —— 固定深色主題（F9 / ADR-0007）。
+   紅綠只代表漲跌，採台股慣例紅漲綠跌；介面其他任何位置都不得出現紅或綠，
+   否則會被讀成漲跌。警示改用琥珀（--warn），互動焦點改用鋼藍（--accent）。
+   所有顏色都只由本檔的 CSS 變數提供（硬性約束 4）。 */
+
+:root {
+  color-scheme: dark;
+
+  --bg: #0d1416;
+  --surface: #131c1f;
+  --surface-raised: #1a2529;
+  --line: #243135;
+  --line-strong: #32454a;
+  --hover: rgba(255, 255, 255, 0.035);
+
+  --text: #e4edef;
+  --text-dim: #8fa5ac;
+  --text-faint: #6b8288;
+
+  --up: #f0574a;
+  --down: #34bf8f;
+  --warn: #e3a93c;
+  --accent: #6fa8c0;
+
+  --font-ui: 'Segoe UI', 'Microsoft JhengHei', system-ui, sans-serif;
+
+  /* F11：等比縮放因子，由 ui/scale.ts 依視窗寬度寫入 */
+  --scale: 1;
+  --fs-label: calc(12px * var(--scale));
+  --fs-cell: calc(13px * var(--scale));
+  --fs-title: calc(16px * var(--scale));
+  --row-height: calc(34px * var(--scale));
+  --pad-x: calc(12px * var(--scale));
+  --pad-y: calc(8px * var(--scale));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: var(--fs-cell);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: calc(2px * var(--scale)) solid var(--accent);
+  outline-offset: 1px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* 工具列 */
+.toolbar {
+  display: flex;
+  align-items: baseline;
+  gap: calc(10px * var(--scale));
+  flex: none;
+  padding: var(--pad-y) var(--pad-x);
+  border-bottom: 1px solid var(--line);
+}
+
+.toolbar h1 {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+}
+
+.tally {
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+}
+
+/* 表格 */
+.board {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: calc(6px * var(--scale)) var(--pad-x);
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: var(--fs-label);
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+
+th.numeric,
+td.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+th button {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(4px * var(--scale));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+th button:hover {
+  color: var(--text);
+}
+
+/* 一律保留指示符的寬度，欄頭不會因排序跳動 */
+th button::after {
+  content: '';
+  width: 1em;
+  text-align: center;
+}
+
+th[aria-sort] button {
+  color: var(--text);
+}
+
+th[aria-sort='ascending'] button::after {
+  content: '▴';
+}
+
+th[aria-sort='descending'] button::after {
+  content: '▾';
+}
+
+tbody td {
+  height: var(--row-height);
+  padding: 0 var(--pad-x);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+tbody tr:hover td {
+  background: var(--hover);
+}
+
+/* 選擇器特異性高於 .up / .down，無成交列整列淡化 */
+tbody tr.untraded td {
+  color: var(--text-faint);
+}
+
+.up {
+  color: var(--up);
+}
+
+.down {
+  color: var(--down);
+}
+
+.flat {
+  color: var(--text);
+}
+
+.missing {
+  color: var(--text-faint);
+}
+
+.arrow {
+  margin-right: calc(4px * var(--scale));
+  font-size: 0.75em;
+}
+
+.empty {
+  padding: calc(48px * var(--scale)) var(--pad-x);
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* F12 投組總計列 */
+.totals {
+  display: flex;
+  align-items: baseline;
+  gap: calc(18px * var(--scale));
+  flex: none;
+  padding: calc(9px * var(--scale)) var(--pad-x);
+  border-top: 1px solid var(--line-strong);
+  background: var(--surface-raised);
+  overflow-x: auto;
+}
+
+.pair {
+  display: flex;
+  align-items: baseline;
+  gap: calc(7px * var(--scale));
+  white-space: nowrap;
+}
+
+.pair .label {
+  color: var(--text-dim);
+  font-size: var(--fs-label);
+}
+
+.pair .value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.notes {
+  display: flex;
+  gap: calc(14px * var(--scale));
+  margin-left: auto;
+  color: var(--warn);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+
+/* F15 狀態列 */
+.status {
+  display: flex;
+  align-items: baseline;
+  gap: calc(14px * var(--scale));
+  flex: none;
+  padding: calc(6px * var(--scale)) var(--pad-x);
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+  font-size: var(--fs-label);
+}
+
+.status .source {
+  color: var(--text-dim);
+}
+
+.status .alert {
+  color: var(--warn);
+}

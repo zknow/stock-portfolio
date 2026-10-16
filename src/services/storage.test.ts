@@ -1,0 +1,62 @@
+import { describe, expect, it } from 'vitest'
+import { DEFAULT_PREFERENCES, SCHEMA_VERSION, parsePortfolio } from './storage'
+
+const VALID = {
+  schemaVersion: 1,
+  sortKey: 'marketValue',
+  sortDirection: 'desc',
+  windowWidth: 1100,
+  windowHeight: 760,
+  holdings: [{ code: '2330', name: '台積電', market: 'listing', shares: 1000, averageCost: 850.5 }],
+}
+
+function without(record: Record<string, unknown>, key: string): Record<string, unknown> {
+  const copy = { ...record }
+  delete copy[key]
+  return copy
+}
+
+describe('parsePortfolio', () => {
+  it('讀出持股與 UI 偏好', () => {
+    const file = parsePortfolio(JSON.stringify(VALID))
+    expect(file.schemaVersion).toBe(SCHEMA_VERSION)
+    expect(file.holdings).toEqual(VALID.holdings)
+    expect(file.sortKey).toBe('marketValue')
+    expect(file.sortDirection).toBe('desc')
+    expect(file.windowWidth).toBe(1100)
+    expect(file.windowHeight).toBe(760)
+  })
+
+  it('缺少 schemaVersion 時視為目前版本', () => {
+    const file = parsePortfolio(JSON.stringify(without(VALID, 'schemaVersion')))
+    expect(file.schemaVersion).toBe(SCHEMA_VERSION)
+    expect(file.holdings).toHaveLength(1)
+  })
+
+  it('schemaVersion 高於支援版本時拒絕，避免降版覆寫', () => {
+    expect(() => parsePortfolio(JSON.stringify({ ...VALID, schemaVersion: SCHEMA_VERSION + 1 }))).toThrow('高於支援')
+  })
+
+  it('偏好不合法時回到預設值', () => {
+    const file = parsePortfolio(
+      JSON.stringify({ ...VALID, sortKey: '不存在的鍵', sortDirection: '橫向', windowWidth: -1, windowHeight: '大' }),
+    )
+    expect(file.sortKey).toBe(DEFAULT_PREFERENCES.sortKey)
+    expect(file.sortDirection).toBe('desc')
+    expect(file.windowWidth).toBe(DEFAULT_PREFERENCES.windowWidth)
+    expect(file.windowHeight).toBe(DEFAULT_PREFERENCES.windowHeight)
+  })
+
+  it('持股不合法時視為損毀', () => {
+    expect(() => parsePortfolio(JSON.stringify({ ...VALID, holdings: [{ code: '2330' }] }))).toThrow('不合法的持股')
+    expect(() => parsePortfolio(JSON.stringify({ ...VALID, holdings: [{ ...VALID.holdings[0], shares: 0 }] }))).toThrow(
+      '不合法的持股',
+    )
+    expect(() => parsePortfolio(JSON.stringify(without(VALID, 'holdings')))).toThrow('holdings')
+    expect(() => parsePortfolio('{')).toThrow()
+  })
+
+  it('空投組可以讀出', () => {
+    expect(parsePortfolio(JSON.stringify({ ...VALID, holdings: [] })).holdings).toEqual([])
+  })
+})

@@ -1,0 +1,109 @@
+# Stock Portfolio
+
+檢視自己台股庫存的桌面應用程式。單機、單人使用，不涉及下單。
+
+- 追蹤持股的即時價格與投資報酬率（總報酬 / 今日報酬）
+- 新增、刪除股票，更新股數與平均單位成本
+- 檢視模式與編輯模式切換，避免誤觸修改
+- 固定深色介面，可自由拖拉視窗、內容等比縮放
+
+## 技術
+
+| 項目 | 選擇 |
+|---|---|
+| 桌面框架 | Neutralinojs v6.10.0（CLI `@neutralinojs/neu` 11.8.0） |
+| 前端 | TypeScript + Vite，不引入 UI 框架 |
+| 測試 | vitest（`src/domain` 純函式，`src/services` 以 mock 隔離 Neutralino API） |
+| 平台 | Windows |
+
+## 報價來源
+
+| 角色 | 來源 |
+|---|---|
+| 主 | `mis.twse.com.tw` 即時報價，5 秒批次輪詢，僅交易時段 09:00–13:30 |
+| 備援 | Yahoo Finance `v8/chart`（延遲約 20 分鐘），連續 3 次失敗後接手 |
+| 標的清單 | TWSE `STOCK_DAY_ALL` + TPEx `tpex_mainboard_quotes`，每日更新一次 |
+
+選擇理由與風險見 `docs/adr/ADR-0001`。
+
+## 執行
+
+```bash
+npm install
+npm run dev               # Vite 開發伺服器（通常不單獨跑）
+npx neu run               # 啟動桌面應用程式，會自動帶起 Vite 與 HMR
+npx neu run -- --window-enable-inspector   # 同上，並開啟開發者工具
+```
+
+`npm run dev` 單獨執行只會起網頁，沒有 Neutralino 原生 API。要看應用程式一律用 `npx neu run`。
+
+打包 Windows 執行檔：
+
+```bash
+npx neu build --release
+```
+
+產物在 `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe` 與 `resources.neu`。加 `--release` 時另有 `dist/stock-portfolio-release.zip`。只有 `bin/` 內實際存在的平台會被產出。
+
+### 目錄別名
+
+| 目錄 | 內容 | 版控 |
+|---|---|---|
+| `build/` | Vite 的產出（前端 bundle） | 不納入 |
+| `dist/` | `neu build` 的產出（執行檔 + `resources.neu`） | 不納入 |
+| `bin/` | Neutralino 框架執行檔（`neu run` 需要） | 不納入 |
+
+Neutralino 的框架執行檔在 `bin/neutralino-win_x64.exe`。`neu` CLI 需要連上 GitHub Releases 才能取得它，在公司 proxy 環境下會失敗；若 `bin/` 為空，需手動從 [neutralinojs releases](https://github.com/neutralinojs/neutralinojs/releases) 取 `neutralinojs-v6.10.0.zip`，解壓後把 `neutralino-win_x64.exe` 放進 `bin/`。
+
+### 網路
+
+`Neutralino.net` 不支援 proxy。在需要 proxy 才能連外的網路環境，報價請求會逾時，此時 `src/services/http.ts` 會自動改走 `curl.exe`（繼承系統的 `HTTPS_PROXY`）。判準與細節見 [ADR-0009](docs/adr/ADR-0009.md)。
+
+## 專案結構
+
+```
+stock-portfolio/
+├── AGENTS.md                  # 專案操作規則（給 Agent 讀）
+├── README.md
+├── TODOLIST.md                # 實作進度追蹤
+├── neutralino.config.json     # Neutralino 設定（必須在根目錄）
+├── index.html                 # Vite 進入點
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── bin/                       # 框架執行檔（neu run 需要，不納入版控）
+├── build/                     # Vite 產出（不納入版控）
+├── dist/                      # neu build 產出（不納入版控）
+├── config/                    # 設定檔（兩個 JSON 於首次執行時產生，不納入版控）
+│   ├── portfolio.json         # 庫存與 UI 偏好
+│   └── symbols.json           # 代號對照表快取
+├── docs/                      # 規格文件
+│   ├── requirements.md
+│   ├── architecture.md
+│   ├── glossary.md
+│   └── adr/
+├── logs/                      # 日誌檔
+│   └── app.log
+├── resources/                 # 其他資源（Vite 的 publicDir，會複製到 build/）
+│   └── icons/appIcon.png
+└── src/                       # 原始程式碼
+    ├── domain/                # 模型與計算，零依賴
+    ├── services/              # 報價、儲存、對照表、日誌
+    ├── ui/                    # 表格、編輯控制、狀態列、主題
+    └── main.ts
+```
+
+## 文件導覽
+
+| 文件 | 內容 |
+|---|---|
+| `docs/requirements.md` | 功能規格：每個功能的規則、驗證、邊界 |
+| `docs/architecture.md` | 分層、模組職責、資料流、檔案格式、ADR 索引 |
+| `docs/glossary.md` | 領域詞彙的單一定義來源 |
+| `docs/adr/` | 十篇技術決策紀錄（含理由與替代方案） |
+| `AGENTS.md` | 專案操作規則 |
+| `TODOLIST.md` | 實作順序與進度 |
+
+## 範圍外
+
+僅支援台股（上市 / 上櫃）。不含下單、不含手續費與證交稅、不含股利、不含交易明細與已實現損益、不含美股與海外市場。
