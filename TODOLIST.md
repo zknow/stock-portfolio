@@ -162,7 +162,7 @@
 - F11 的等比縮放原本沒有下限：視窗收到最小 700 寬時，13px 的表格字級會縮到約 8.3px。已於「P4a 後續修正」加上下限 0.85（ADR-0011）
 - `PnlTotals` 只有 `todayReturn`，沒有今日報酬率欄位；總計列因此只顯示 F12 列的「今日總報酬」金額
 - `src/ui/*.test.ts` 於 P4a 後續修正補上（`scale.test.ts`、`TableView.test.ts`、`EditControls.test.ts`），`README.md` 與 `AGENTS.md` 的測試範圍已同步納入 `src/ui` 的純函式
-- `resources/icons/appIcon.png` 仍是 P1 的幾何 placeholder（紅漲綠跌三柱）。正式圖示待 P5 前決定
+- `resources/icons/appIcon.png` 的 P1 幾何 placeholder（紅漲綠跌三柱）已於 P5 前換成正式圖示，見 P5 段
 
 ### 啟動抓價與視窗尺寸修正（2026-10-16，驗收 P4b 時發現）
 
@@ -185,6 +185,7 @@
       > 盤外已驗：打包後的 exe 可啟動、輪詢啟動後停止、`symbols.json` 當日快取命中不重抓。盤中即時更新與降級回試需交易時段
 - [x] 首次執行 `npx neu build --release`，核對 `dist/` 實際產物與 README 記載一致
       > `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe`（2,459,136 bytes）+ `resources.neu`（53,428 bytes）；`dist/stock-portfolio-release.zip`（1,180,903 bytes）。與 README 記載相符
+- [x] 換上正式 `resources/icons/appIcon.png`：深色圓角磚 ＋ 鋼藍 `$`，512×512。配色全部取自 `theme.css`（`--surface-raised` 底磚、`--line-strong` 邊框、`--accent` 字）。`neutralino.config.json` 的圖示路徑不變
 
 ### P5 發現的坑
 

@@ -9,7 +9,7 @@ export default defineConfig({
     strictPort: true,
   },
   build: {
+    // outDir 在專案根目錄內，Vite 預設就會清空；若日後搬到根目錄外要補 emptyOutDir: true
     outDir: 'build',
-    emptyOutDir: true,
   },
 })

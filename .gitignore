@@ -25,3 +25,4 @@ config/symbols.json
 
 # 本機工具
 start.bat
+release.bat
