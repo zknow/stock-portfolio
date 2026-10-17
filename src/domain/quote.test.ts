@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { buildQuote, isStale, parsePrice } from './quote'
+import { buildQuote, codesWithoutQuote, isStale, parsePrice } from './quote'
+import type { Quote, QuoteTarget } from './types'
 
 describe('parsePrice', () => {
   it('解析來源的價數字串', () => {
@@ -72,5 +73,36 @@ describe('isStale', () => {
 
   it('非同日算非當日', () => {
     expect(isStale('20261015', '20261016')).toBe(true)
+  })
+})
+
+describe('codesWithoutQuote', () => {
+  const targets: QuoteTarget[] = [
+    { code: '2330', market: 'listing' },
+    { code: '6488', market: 'otc' },
+  ]
+  const quote = (code: string): Quote => ({
+    code,
+    price: 100,
+    valuationPrice: 100,
+    previousClose: 99,
+    traded: true,
+    dataDate: '20261016',
+  })
+
+  it('全部命中時回空陣列', () => {
+    expect(codesWithoutQuote(targets, [quote('2330'), quote('6488')])).toEqual([])
+  })
+
+  it('列出查無資料的代號，順序依 targets', () => {
+    expect(codesWithoutQuote(targets, [quote('6488')])).toEqual(['2330'])
+  })
+
+  it('一筆報價都沒有時列出全部', () => {
+    expect(codesWithoutQuote(targets, [])).toEqual(['2330', '6488'])
+  })
+
+  it('沒有目標時回空陣列', () => {
+    expect(codesWithoutQuote([], [quote('2330')])).toEqual([])
   })
 })

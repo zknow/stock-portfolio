@@ -1,6 +1,7 @@
-import { buildQuote, parsePrice } from '../../domain/quote'
+import { buildQuote, codesWithoutQuote, parsePrice } from '../../domain/quote'
 import type { Quote, QuoteTarget } from '../../domain/types'
 import { getText } from '../http'
+import { log } from '../logger'
 import type { QuoteProvider } from './QuoteProvider'
 
 export const MIS_ENDPOINT = 'https://mis.twse.com.tw/stock/api/getStockInfo.jsp'
@@ -56,6 +57,14 @@ export const misProvider: QuoteProvider = {
   async fetchQuotes(targets) {
     const response = await getText(buildMisUrl(targets))
     if (response.status !== 200) throw new Error(`MIS HTTP ${response.status}`)
-    return { source: 'mis', quotes: parseMisResponse(response.body), fetchedAt: new Date().toISOString() }
+
+    const quotes = parseMisResponse(response.body)
+    const missing = codesWithoutQuote(targets, quotes)
+    if (missing.length > 0) {
+      // MIS 對查不到的代號回傳佔位物件而不是錯誤，不記下來的話畫面會靜默留白
+      await log('WARN', 'quote.missing', `MIS 未回傳報價：${missing.join('、')}`)
+    }
+
+    return { source: 'mis', quotes, fetchedAt: new Date().toISOString() }
   },
 }

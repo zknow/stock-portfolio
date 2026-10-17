@@ -13,7 +13,7 @@
 |---|---|
 | 桌面框架 | Neutralinojs v6.10.0（CLI `@neutralinojs/neu` 11.8.0） |
 | 前端 | TypeScript + Vite，不引入 UI 框架 |
-| 測試 | vitest（`src/domain` 純函式，`src/services` 以 mock 隔離 Neutralino API） |
+| 測試 | vitest（`src/domain` 與 `src/ui` 的純函式、`src/services` 以 mock 隔離 Neutralino API） |
 | 平台 | Windows |
 
 ## 報價來源
@@ -44,6 +44,8 @@ npx neu build --release
 ```
 
 產物在 `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe` 與 `resources.neu`。加 `--release` 時另有 `dist/stock-portfolio-release.zip`。只有 `bin/` 內實際存在的平台會被產出。
+
+打包後的 exe 以**行程的工作目錄**解析 `config/` 與 `logs/` 這類相對路徑。雙擊執行時工作目錄等於 exe 所在目錄，資料就在 exe 旁邊；若從其他目錄啟動（例如 `Start-Process` 未指定 `-WorkingDirectory`），資料會落在該目錄。`dist/stock-portfolio/neutralinojs.log` 是框架自己的日誌，與應用程式的 `logs/app.log` 無關。
 
 ### 目錄別名
 
@@ -100,7 +102,7 @@ stock-portfolio/
 | `docs/requirements.md` | 功能規格：每個功能的規則、驗證、邊界 |
 | `docs/architecture.md` | 分層、模組職責、資料流、檔案格式、ADR 索引 |
 | `docs/glossary.md` | 領域詞彙的單一定義來源 |
-| `docs/adr/` | 十篇技術決策紀錄（含理由與替代方案） |
+| `docs/adr/` | 十四篇技術決策紀錄（含理由與替代方案） |
 | `AGENTS.md` | 專案操作規則 |
 | `TODOLIST.md` | 實作順序與進度 |
 

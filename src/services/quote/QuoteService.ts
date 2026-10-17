@@ -1,4 +1,4 @@
-import { isStale } from '../../domain/quote'
+import { codesWithoutQuote, isStale } from '../../domain/quote'
 import type { QuoteBatch, QuoteSource, QuoteTarget } from '../../domain/types'
 import { dateKey, isTradingTime } from '../clock'
 import { log } from '../logger'
@@ -9,6 +9,8 @@ import { yahooProvider } from './YahooProvider'
 export const POLL_INTERVAL_MS = 5000
 export const FAIL_THRESHOLD = 3
 export const RETRY_INTERVAL_MS = 5 * 60 * 1000
+/** 非交易時段首抓沒取得報價時的延遲重試間隔 */
+export const STARTUP_RETRY_MS = 5000
 
 export interface SourceState {
   /** 降級中，使用 Yahoo */
@@ -76,6 +78,8 @@ export interface QuoteService {
   start(): Promise<void>
   stop(): Promise<void>
   setTargets(targets: QuoteTarget[]): void
+  /** 單次抓取，不啟動輪詢。用於新增持股後補抓（F2） */
+  refreshOnce(): Promise<void>
   status(): QuoteStatus
 }
 
@@ -87,6 +91,7 @@ export function createQuoteService(onUpdate: (update: QuoteUpdate) => void): Quo
   let phase: SessionPhase = 'stopped'
   let running = false
   let catchUpDone = true
+  let inFlight = false
   let timer: number | null = null
 
   function currentStatus(): QuoteStatus {
@@ -126,19 +131,37 @@ export function createQuoteService(onUpdate: (update: QuoteUpdate) => void): Quo
     }
   }
 
+  /** 同一時間只允許一次請求：輪詢與新增後的補抓可能重疊 */
   async function pollOnce(): Promise<void> {
-    if (targets.length === 0) {
+    if (inFlight) return
+    inFlight = true
+    try {
+      if (targets.length === 0) {
+        emit()
+        return
+      }
+
+      if (sourceState.degraded && shouldRetryMis(sourceState, Date.now())) {
+        if (!(await attempt('mis'))) await attempt('yahoo')
+      } else {
+        await attempt(sourceState.degraded ? 'yahoo' : 'mis')
+      }
+
       emit()
-      return
+    } finally {
+      inFlight = false
     }
+  }
 
-    if (sourceState.degraded && shouldRetryMis(sourceState, Date.now())) {
-      if (!(await attempt('mis'))) await attempt('yahoo')
-    } else {
-      await attempt(sourceState.degraded ? 'yahoo' : 'mis')
-    }
+  /** 首抓沒取得報價時就沒有下一次了（非交易時段停止輪詢），延遲重試一次 */
+  function startupNeedsRetry(): boolean {
+    if (targets.length === 0) return false
+    return codesWithoutQuote(targets, batch?.quotes ?? []).length > 0
+  }
 
-    emit()
+  async function retryStartup(): Promise<void> {
+    if (!running) return
+    await pollOnce()
   }
 
   async function tick(): Promise<void> {
@@ -174,6 +197,10 @@ export function createQuoteService(onUpdate: (update: QuoteUpdate) => void): Quo
       } else {
         phase = 'stopped'
         emit()
+        if (startupNeedsRetry()) {
+          await log('WARN', 'quote.retry', `首抓未取得報價，${STARTUP_RETRY_MS / 1000} 秒後重試一次`)
+          timer = window.setTimeout(() => void retryStartup(), STARTUP_RETRY_MS)
+        }
       }
     },
 
@@ -188,6 +215,10 @@ export function createQuoteService(onUpdate: (update: QuoteUpdate) => void): Quo
 
     setTargets(next) {
       targets = next
+    },
+
+    async refreshOnce() {
+      await pollOnce()
     },
 
     status: currentStatus,

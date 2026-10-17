@@ -50,7 +50,7 @@ npm install
 npm run dev                                    # Vite 開發伺服器
 npx neu run                                    # 桌面應用程式（會帶起 Vite）
 npx neu run -- --window-enable-inspector        # 同上，附開發者工具
-npm test                                       # vitest（src/domain 與 src/services）
+npm test                                       # vitest（src/domain、src/services、src/ui 的純函式）
 npx neu build --release                        # 打包 Windows 執行檔到 dist/
 ```
 

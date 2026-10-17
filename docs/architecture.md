@@ -75,9 +75,9 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 | 檔案 | 職責 |
 |---|---|
 | `theme.css` | 深色 design token（CSS 變數）、紅漲綠跌色票 |
-| `scale.ts` | 監聽 DOM `resize`，更新縮放用的 CSS 變數 |
-| `TableView.ts` | 9 欄表格、欄頭排序、總計列、無成交列淡化 |
-| `EditControls.ts` | 新增 / 編輯 / 刪除（二次確認）、強制新增逃生門 |
+| `scale.ts` | 監聽 DOM `resize`，更新縮放用的 CSS 變數（含下限 0.85，ADR-0011） |
+| `TableView.ts` | 9 欄表格、欄頭排序、總計列、無成交列淡化、編輯模式的就地編輯與操作欄 |
+| `EditControls.ts` | 工具列模式切換鈕、新增表單、強制新增逃生門、表單錯誤訊息 |
 | `StatusBar.ts` | 更新時間、來源標籤、降級警示、非當日資料標記 |
 
 ## 4. 關鍵介面
@@ -123,6 +123,7 @@ main.ts
   → QuoteService.start()
         若在交易時段 → 立即抓一次，之後每 5 秒
         若不在      → 抓一次即停，狀態列顯示「已收盤 / 非交易時段」
+                      首抓沒取得全部持股的報價時，延遲 5 秒重試一次（ADR-0014）
 ```
 
 ### 5.2 輪詢循環
@@ -144,13 +145,17 @@ main.ts
 ### 5.3 編輯
 
 ```
-使用者切到編輯模式
-  → 新增：輸入代號 → symbolTable.lookup()
+使用者按工具列的切換鈕進入編輯模式
+  → 新增：表單展開於表格上方，輸入代號 → symbolTable.lookup()
         命中 → 帶入 name / market
         未命中 → 顯示強制新增逃生門（自選 market + 自填 name）
-  → validate → storage.save() → QuoteService 更新 targets（不需重啟）
-  → 刪除：二次確認（顯示代號與名稱）→ storage.save() → 移出 targets
+  → validate → 更新 holdings → storage.save() → QuoteService.setTargets()（不需重啟）
+  → 新增後另呼叫 QuoteService.refreshOnce() 補抓一次，使新列立即有報價（非交易時段亦然）
+  → 編輯：股數 / 平均成本就地編輯，Enter 或「儲存」提交，Esc 或「取消」放棄
+  → 刪除：os.showMessageBox 二次確認（內容含代號與名稱）→ storage.save() → setTargets()
 ```
+
+編輯期間 5 秒輪詢照常重繪表格。輸入中的草稿由 `main.ts` 持有、`TableView` 於重繪時還原焦點與游標位置，因此重繪不會清掉使用者打到一半的內容（F4）。
 
 ## 6. 檔案格式
 
@@ -170,6 +175,8 @@ main.ts
 ```
 
 `schemaVersion` 供日後遷移使用，載入時若版本不符則執行遷移後回寫。
+
+`windowWidth` / `windowHeight` 是**內容尺寸（CSS px）**，等於 `window.innerWidth` / `innerHeight`；還原時要換算成 `window.setSize` 收的外框尺寸，見 ADR-0013。
 
 ### 6.2 `config/symbols.json`
 
@@ -213,6 +220,7 @@ main.ts
 - 沒有 `windowResize` 事件 → 使用 DOM `resize` 監聽
 - 沒有 `window.setPosition` → 若需移動視窗用 `window.move(x, y)`
 - `window.setSize` 的 `minWidth` 必須與 `minHeight` 成對提供
+- `window.setSize` 的 `width` / `height` 與 `minWidth` / `minHeight` 是**外框尺寸（實體 px）**，與 `window.innerWidth`（內容尺寸、CSS px）差一個 `devicePixelRatio` 與邊框。實測與換算見 ADR-0013
 
 ### 7.2 前端工具鏈
 
@@ -280,7 +288,7 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | 未設 `HTTPS_PROXY` / `HTTP_PROXY` | `Neutralino.net.get(url, { encodePath: true, keepAlive: false, timeout: <毫秒> })` |
 | 已設 `HTTPS_PROXY` / `HTTP_PROXY` | `Neutralino.os.execCommand('curl.exe -s -i -m <秒數> "<url>"')`，剝除開頭的標頭區塊後取狀態碼與本文 |
 
-`net.get` 的 `timeout` 在 6.10.0 的型別中宣告為 `boolean`，框架實際要毫秒數字，呼叫時以轉型帶入。`os.execCommand` 沒有逾時參數，這條路徑的逾時由 `curl.exe -m` 負責。
+`net.get` 的 `timeout` 在 6.10.0 的型別中宣告為 `boolean`，框架實際要毫秒數字，呼叫時以轉型帶入；**但實測框架不遵守這個選項**（指定 3 秒仍等到 OS 的 21 秒），因此 `http.ts` 另以 JS 端計時器補上逾時（見 ADR-0013）。`os.execCommand` 沒有逾時參數，這條路徑的逾時由 `curl.exe -m` 負責。
 
 **`curl.exe -i` 會輸出多個標頭區塊。** 走 proxy 的 HTTPS 連線先吐 `HTTP/1.1 200 Connection established`，之後才是真正的回應。因此 `getText` 連續剝除開頭的標頭區塊，狀態碼取自最後一個標頭區塊的第一行，其後即為本文。
 
@@ -297,7 +305,7 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | `y` 缺失 | 估值價為 `null` → 報酬欄顯示 `—`、該列排除於總計 |
 | `portfolio.json` 損毀 | 拒絕覆寫，log 記錄，UI 顯示錯誤並保留原檔 |
 | `symbols.json` 過期且更新失敗 | 沿用舊快取，log 記錄，不阻擋啟動 |
-| 非交易日啟動 | 抓一次即停，狀態列顯示「非交易時段」 |
+| 非交易日啟動 | 抓一次即停，狀態列顯示「非交易時段」；首抓沒取得報價則延遲 5 秒重試一次（ADR-0014） |
 
 ## 9. ADR 索引
 
@@ -313,3 +321,7 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0008](adr/ADR-0008.md) | 視窗尺寸與輪詢時段 |
 | [ADR-0009](adr/ADR-0009.md) | 報價傳輸以 `net.get` 為主，`curl.exe` 為備援 |
 | [ADR-0010](adr/ADR-0010.md) | Vite 產出放 `build/`，globals 由框架注入 |
+| [ADR-0011](adr/ADR-0011.md) | 縮放因子下限 0.85，低於下限由表格水平捲動消化 |
+| [ADR-0012](adr/ADR-0012.md) | 編輯介面採就地編輯與系統原生確認對話框 |
+| [ADR-0013](adr/ADR-0013.md) | `window.setSize` 收外框尺寸、`net.get` 的 `timeout` 不生效 |
+| [ADR-0014](adr/ADR-0014.md) | 非交易時段首抓失敗時延遲重試一次 |

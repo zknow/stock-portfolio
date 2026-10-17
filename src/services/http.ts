@@ -56,6 +56,26 @@ export function parseCurlOutput(output: string): HttpTextResponse {
 
 let selected: Transport | null = null
 
+/**
+ * 框架的 `net.get` 不遵守 `timeout`（實測 3 秒逾時仍等到 OS 的 21 秒），連線卡住時
+ * 畫面會靜默留白，因此補上 JS 端上限
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutSeconds: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`請求逾時 ${timeoutSeconds} 秒`)), timeoutSeconds * 1000)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error: unknown) => {
+        clearTimeout(timer)
+        reject(error)
+      },
+    )
+  })
+}
+
 async function curlAvailable(): Promise<boolean> {
   try {
     const result = await os.execCommand('curl.exe --version')
@@ -88,6 +108,6 @@ export async function getText(url: string, timeoutSeconds = DEFAULT_TIMEOUT_SECO
     keepAlive: false,
     timeout: timeoutSeconds * 1000,
   } as unknown as NetRequestOptions
-  const response = await net.get(url, options)
+  const response = await withTimeout(net.get(url, options), timeoutSeconds)
   return { status: response.status, body: response.body }
 }

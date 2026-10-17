@@ -38,6 +38,40 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
+/* 按鈕 */
+.ghost,
+.primary {
+  padding: calc(3px * var(--scale)) calc(10px * var(--scale));
+  border: 1px solid var(--line-strong);
+  border-radius: calc(4px * var(--scale));
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-label);
+  cursor: pointer;
+}
+
+.ghost:hover:not(:disabled),
+.primary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.primary {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.ghost:disabled,
+.primary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 html,
 body {
   height: 100%;
@@ -68,7 +102,7 @@ body {
 /* 工具列 */
 .toolbar {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: calc(10px * var(--scale));
   flex: none;
   padding: var(--pad-y) var(--pad-x);
@@ -83,6 +117,78 @@ body {
 
 .tally {
   color: var(--text-faint);
+  font-size: var(--fs-label);
+}
+
+.edit-group {
+  display: flex;
+  align-items: center;
+  gap: calc(8px * var(--scale));
+  margin-left: auto;
+}
+
+/* F2 新增表單 */
+.addform {
+  flex: none;
+  padding: var(--pad-y) var(--pad-x);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.addform-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: calc(12px * var(--scale));
+}
+
+.addform-row + .addform-row {
+  margin-top: calc(8px * var(--scale));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(3px * var(--scale));
+}
+
+.field label,
+.field .label {
+  color: var(--text-dim);
+  font-size: var(--fs-label);
+}
+
+input,
+select {
+  padding: calc(3px * var(--scale)) calc(6px * var(--scale));
+  border: 1px solid var(--line-strong);
+  border-radius: calc(4px * var(--scale));
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-label);
+}
+
+.addform input {
+  width: calc(110px * var(--scale));
+}
+
+#add-code {
+  width: calc(84px * var(--scale));
+}
+
+.resolved {
+  color: var(--text-dim);
+  font-size: var(--fs-label);
+}
+
+.resolved.alert {
+  color: var(--warn);
+}
+
+.form-error {
+  margin: calc(8px * var(--scale)) 0 0;
+  color: var(--warn);
   font-size: var(--fs-label);
 }
 
@@ -196,6 +302,50 @@ tbody tr.untraded td {
   padding: calc(48px * var(--scale)) var(--pad-x);
   color: var(--text-faint);
   text-align: center;
+}
+
+.empty-title {
+  display: block;
+}
+
+.empty-hint {
+  display: block;
+  margin-top: calc(6px * var(--scale));
+}
+
+.empty button {
+  margin-top: calc(12px * var(--scale));
+}
+
+/* F4 就地編輯 */
+td.editable {
+  border-bottom: 1px dashed var(--line-strong);
+  cursor: pointer;
+}
+
+td.editable:hover {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+.cell-input {
+  width: calc(90px * var(--scale));
+  text-align: right;
+}
+
+td.actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+td.actions button {
+  margin-left: calc(6px * var(--scale));
+}
+
+.row-error {
+  margin-left: calc(8px * var(--scale));
+  color: var(--warn);
+  font-size: var(--fs-label);
 }
 
 /* F12 投組總計列 */

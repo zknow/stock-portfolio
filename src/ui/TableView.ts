@@ -2,25 +2,37 @@ import { MISSING, directionOf, formatAmount, formatPrice, formatRate, formatShar
 import type { Direction } from '../domain/format'
 import type { PnlRow, PnlTotals } from '../domain/pnl'
 import type { SortDirection, SortKey } from '../domain/types'
+import type { EditMode } from './EditControls'
 
 interface Column {
   key: SortKey
   label: string
-  numeric: boolean
 }
 
-/** F1：可見欄位固定 9 欄，順序即此處的順序 */
+/** F1：檢視模式可見欄位固定 9 欄，順序即此處的順序 */
 const COLUMNS: Column[] = [
-  { key: 'code', label: '代號', numeric: false },
-  { key: 'name', label: '名稱', numeric: false },
-  { key: 'shares', label: '股數', numeric: true },
-  { key: 'averageCost', label: '平均成本', numeric: true },
-  { key: 'price', label: '現價', numeric: true },
-  { key: 'totalReturn', label: '總報酬金額', numeric: true },
-  { key: 'totalReturnRate', label: '總報酬率', numeric: true },
-  { key: 'todayReturn', label: '今日報酬金額', numeric: true },
-  { key: 'todayReturnRate', label: '今日報酬率', numeric: true },
+  { key: 'code', label: '代號' },
+  { key: 'name', label: '名稱' },
+  { key: 'shares', label: '股數' },
+  { key: 'averageCost', label: '平均成本' },
+  { key: 'price', label: '現價' },
+  { key: 'totalReturn', label: '總報酬金額' },
+  { key: 'totalReturnRate', label: '總報酬率' },
+  { key: 'todayReturn', label: '今日報酬金額' },
+  { key: 'todayReturnRate', label: '今日報酬率' },
 ]
+
+/** 數字欄：決定欄頭對齊與首次點擊的方向。`marketValue` 不顯示但仍為數字欄 */
+const NUMERIC_KEYS: ReadonlySet<SortKey> = new Set<SortKey>([
+  'shares',
+  'averageCost',
+  'price',
+  'totalReturn',
+  'totalReturnRate',
+  'todayReturn',
+  'todayReturnRate',
+  'marketValue',
+])
 
 const SORT_VALUES: Record<SortKey, (row: PnlRow) => number | string | null> = {
   code: (row) => row.holding.code,
@@ -40,13 +52,39 @@ export interface SortState {
   direction: SortDirection
 }
 
+/** 就地編輯中的草稿。以字串保存，保留使用者輸入的原貌（F4） */
+export interface EditDraft {
+  code: string
+  shares: string
+  averageCost: string
+}
+
+export type DraftField = 'shares' | 'averageCost'
+
+export interface TableEdit {
+  mode: EditMode
+  draft: EditDraft | null
+  /** 就地編輯的驗證錯誤，null 代表無誤 */
+  error: string | null
+}
+
+export interface TableHandlers {
+  sort(key: SortKey): void
+  startEdit(code: string): void
+  changeDraft(code: string, field: DraftField, value: string): void
+  commit(code: string): void
+  cancelEdit(): void
+  remove(code: string): void
+  requestAdd(): void
+}
+
 export interface TableView {
-  render(rows: PnlRow[], totals: PnlTotals, sort: SortState): void
+  render(rows: PnlRow[], totals: PnlTotals, sort: SortState, edit: TableEdit): void
 }
 
 /** 首次點擊某欄時的起始方向：數字欄遞減，文字欄遞增 */
 export function defaultDirection(key: SortKey): SortDirection {
-  return COLUMNS.find((column) => column.key === key)?.numeric === true ? 'desc' : 'asc'
+  return NUMERIC_KEYS.has(key) ? 'desc' : 'asc'
 }
 
 /** 缺值一律排最後，不受升冪或降冪影響（F13） */
@@ -81,6 +119,14 @@ function span(text: string, className: string): HTMLSpanElement {
   return element
 }
 
+function button(text: string, className: string): HTMLButtonElement {
+  const element = document.createElement('button')
+  element.type = 'button'
+  element.className = className
+  element.textContent = text
+  return element
+}
+
 function valueCell(value: number | null, text: string): HTMLTableCellElement {
   return cell(text, `numeric ${value === null ? 'missing' : directionOf(value)}`)
 }
@@ -102,21 +148,92 @@ function priceCell(row: PnlRow): HTMLTableCellElement {
   return element
 }
 
-function rowFor(row: PnlRow): HTMLTableRowElement {
+/** 編輯模式：股數與平均成本可點擊就地編輯（F4） */
+function editableCell(
+  row: PnlRow,
+  edit: TableEdit,
+  handlers: TableHandlers,
+  field: DraftField,
+): HTMLTableCellElement {
+  const draft = edit.draft?.code === row.holding.code ? edit.draft : null
+  const text = field === 'shares' ? formatShares(row.holding.shares) : formatPrice(row.holding.averageCost)
+
+  if (edit.mode !== 'edit' || draft === null) {
+    const element = cell(text, 'numeric')
+    if (edit.mode === 'edit') {
+      element.classList.add('editable')
+      element.addEventListener('click', () => handlers.startEdit(row.holding.code))
+    }
+    return element
+  }
+
+  const input = document.createElement('input')
+  input.type = 'text'
+  input.className = 'cell-input'
+  input.value = field === 'shares' ? draft.shares : draft.averageCost
+  input.dataset.code = row.holding.code
+  input.dataset.field = field
+  input.addEventListener('input', () => {
+    // 立即清掉上一輪的驗證訊息，不必等下一次輪詢重繪
+    element.closest('tr')?.querySelector('.row-error')?.remove()
+    handlers.changeDraft(row.holding.code, field, input.value)
+  })
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handlers.commit(row.holding.code)
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault()
+      handlers.cancelEdit()
+    }
+  })
+
+  const element = cell('', 'numeric')
+  element.replaceChildren(input)
+  return element
+}
+
+/** 僅編輯模式出現的第 10 欄 */
+function actionsCell(row: PnlRow, edit: TableEdit, handlers: TableHandlers): HTMLTableCellElement {
+  const element = cell('', 'actions')
+  element.hidden = edit.mode !== 'edit'
+  const { code } = row.holding
+
+  const remove = button('刪除', 'ghost')
+  remove.addEventListener('click', () => handlers.remove(code))
+  element.append(remove)
+
+  if (edit.draft?.code === code) {
+    const save = button('儲存', 'primary')
+    save.addEventListener('click', () => handlers.commit(code))
+
+    const cancel = button('取消', 'ghost')
+    cancel.addEventListener('click', () => handlers.cancelEdit())
+
+    element.append(save, cancel)
+    if (edit.error !== null) element.append(span(edit.error, 'row-error'))
+  }
+
+  return element
+}
+
+function rowFor(row: PnlRow, edit: TableEdit, handlers: TableHandlers): HTMLTableRowElement {
   const element = document.createElement('tr')
   if (row.quote !== null && !row.quote.traded) element.className = 'untraded'
 
-  const { code, name, shares, averageCost } = row.holding
+  const { code, name } = row.holding
   element.append(
     cell(code, ''),
     cell(name, ''),
-    cell(formatShares(shares), 'numeric'),
-    cell(formatPrice(averageCost), 'numeric'),
+    editableCell(row, edit, handlers, 'shares'),
+    editableCell(row, edit, handlers, 'averageCost'),
     priceCell(row),
     valueCell(row.totalReturn, formatAmount(row.totalReturn)),
     valueCell(row.totalReturnRate, formatRate(row.totalReturnRate)),
     valueCell(row.todayReturn, formatAmount(row.todayReturn)),
     valueCell(row.todayReturnRate, formatRate(row.todayReturnRate)),
+    actionsCell(row, edit, handlers),
   )
   return element
 }
@@ -132,21 +249,43 @@ function pair(label: string, text: string, direction: Direction): HTMLElement {
   return box
 }
 
-export function createTableView(host: HTMLElement, onSort: (key: SortKey) => void): TableView {
+interface FocusSnapshot {
+  code: string
+  field: string
+  start: number | null
+  end: number | null
+}
+
+/** 5 秒輪詢會重建整個 tbody，輸入中的焦點與游標位置必須先記下再還原（F4） */
+function captureFocus(): FocusSnapshot | null {
+  const active = document.activeElement
+  if (!(active instanceof HTMLInputElement)) return null
+
+  const { code, field } = active.dataset
+  if (code === undefined || field === undefined) return null
+  return { code, field, start: active.selectionStart, end: active.selectionEnd }
+}
+
+export function createTableView(host: HTMLElement, handlers: TableHandlers): TableView {
   const headRow = document.createElement('tr')
   const headers = COLUMNS.map((column) => {
     const th = document.createElement('th')
-    if (column.numeric) th.className = 'numeric'
+    if (NUMERIC_KEYS.has(column.key)) th.className = 'numeric'
 
     const button = document.createElement('button')
     button.type = 'button'
     button.textContent = column.label
-    button.addEventListener('click', () => onSort(column.key))
+    button.addEventListener('click', () => handlers.sort(column.key))
 
     th.append(button)
     headRow.append(th)
     return { column, th }
   })
+
+  const actionsHead = document.createElement('th')
+  actionsHead.className = 'actions'
+  actionsHead.textContent = '操作'
+  headRow.append(actionsHead)
 
   const head = document.createElement('thead')
   head.append(headRow)
@@ -157,8 +296,6 @@ export function createTableView(host: HTMLElement, onSort: (key: SortKey) => voi
 
   const empty = document.createElement('p')
   empty.className = 'empty'
-  empty.textContent = '尚未新增任何持股'
-  empty.hidden = true
 
   const board = document.createElement('div')
   board.className = 'board'
@@ -169,8 +306,31 @@ export function createTableView(host: HTMLElement, onSort: (key: SortKey) => voi
   totals.className = 'totals'
   host.append(totals)
 
+  function restoreFocus(snapshot: FocusSnapshot | null): void {
+    if (snapshot === null) return
+    const target = body.querySelector<HTMLInputElement>(
+      `input[data-code="${snapshot.code}"][data-field="${snapshot.field}"]`,
+    )
+    if (target === null) return
+    target.focus()
+    if (snapshot.start !== null && snapshot.end !== null) target.setSelectionRange(snapshot.start, snapshot.end)
+  }
+
+  function renderEmpty(mode: EditMode): void {
+    empty.replaceChildren(span('尚未新增任何持股', 'empty-title'))
+    if (mode === 'edit') {
+      const add = button('新增股票', 'primary')
+      add.addEventListener('click', () => handlers.requestAdd())
+      empty.append(add)
+    } else {
+      empty.append(span('切換到編輯模式即可新增', 'empty-hint'))
+    }
+  }
+
   return {
-    render(rows, values, sort) {
+    render(rows, values, sort, edit) {
+      const focus = captureFocus()
+
       for (const { column, th } of headers) {
         if (column.key === sort.key) {
           th.setAttribute('aria-sort', sort.direction === 'asc' ? 'ascending' : 'descending')
@@ -178,12 +338,14 @@ export function createTableView(host: HTMLElement, onSort: (key: SortKey) => voi
           th.removeAttribute('aria-sort')
         }
       }
+      actionsHead.hidden = edit.mode !== 'edit'
 
-      body.replaceChildren(...rows.map(rowFor))
+      body.replaceChildren(...rows.map((row) => rowFor(row, edit, handlers)))
 
       const isEmpty = rows.length === 0
       table.hidden = isEmpty
       empty.hidden = !isEmpty
+      if (isEmpty) renderEmpty(edit.mode)
 
       const notes = document.createElement('div')
       notes.className = 'notes'
@@ -202,6 +364,8 @@ export function createTableView(host: HTMLElement, onSort: (key: SortKey) => voi
         pair('今日報酬金額', `NT$${formatAmount(values.todayReturn)}`, directionOf(values.todayReturn)),
         notes,
       )
+
+      restoreFocus(focus)
     },
   }
 }

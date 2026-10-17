@@ -1,4 +1,4 @@
-import type { Quote } from './types'
+import type { Quote, QuoteTarget } from './types'
 
 /** 解析來源的價格值。無法解析、非數字或非正數時回傳 null */
 export function parsePrice(raw: string | number | null | undefined): number | null {
@@ -30,4 +30,10 @@ export function buildQuote(input: QuoteInput): Quote {
 
 export function isStale(dataDate: string, today: string): boolean {
   return dataDate !== today
+}
+
+/** 回傳 targets 中沒有對應報價的代號。來源對查無資料會回傳佔位物件，解析後已被略過 */
+export function codesWithoutQuote(targets: QuoteTarget[], quotes: Quote[]): string[] {
+  const covered = new Set(quotes.map((quote) => quote.code))
+  return targets.filter((target) => !covered.has(target.code)).map((target) => target.code)
 }
