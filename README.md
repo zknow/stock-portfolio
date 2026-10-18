@@ -45,6 +45,17 @@ npx neu build --release
 
 產物在 `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe` 與 `resources.neu`。加 `--release` 時另有 `dist/stock-portfolio-release.zip`。只有 `bin/` 內實際存在的平台會被產出。
 
+### 便利腳本
+
+不想打指令時可直接雙擊根目錄的兩支腳本（等同上面的指令）：
+
+| 腳本 | 動作 |
+|---|---|
+| `start.bat` | `npx neu run`；加參數 `start.bat inspector` 等同 `--window-enable-inspector` |
+| `release.bat` | `npx neu build --release` |
+
+兩者都會先切到腳本所在目錄，並在 `node_modules/` 或 `bin/neutralino-win_x64.exe` 缺少時印出訊息後結束。結束時會 `pause`，方便雙擊執行時看到輸出。
+
 打包後的 exe 以**行程的工作目錄**解析 `config/` 與 `logs/` 這類相對路徑。雙擊執行時工作目錄等於 exe 所在目錄，資料就在 exe 旁邊；若從其他目錄啟動（例如 `Start-Process` 未指定 `-WorkingDirectory`），資料會落在該目錄。`dist/stock-portfolio/neutralinojs.log` 是框架自己的日誌，與應用程式的 `logs/app.log` 無關。
 
 ### 目錄別名
@@ -73,6 +84,8 @@ stock-portfolio/
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
+├── start.bat                  # 雙擊即啟動桌面應用程式
+├── release.bat                # 雙擊即打包 Windows 執行檔
 ├── bin/                       # 框架執行檔（neu run 需要，不納入版控）
 ├── build/                     # Vite 產出（不納入版控）
 ├── dist/                      # neu build 產出（不納入版控）
