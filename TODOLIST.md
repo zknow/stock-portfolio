@@ -148,7 +148,7 @@
 
 ### P4a 後續修正（2026-10-16，commit「fix scale」與其補完）
 
-- [x] 縮放加上下限：`MIN_SCALE = 0.85`（對應視窗寬 935），低於下限改由表格水平捲動消化 → `docs/adr/ADR-0011.md`
+- [x] 縮放加上下限：`MIN_SCALE = 0.85`（對應視窗寬 935），低於下限改由表格水平捲動消化 → `docs/adr/ADR-0011.md` → 下限仍為 0.85，但「低於下限由表格水平捲動消化」與 700×480 的固定下界已被 ADR-0016 取代
 - [x] 補上 `docs/adr/ADR-0011.md`（前一版只在 `scale.ts` 註解引用，文件未落地）
 - [x] 同步 `requirements.md` F11、`glossary.md`、`architecture.md` 的 ADR 索引、`README.md` 的 ADR 篇數
 - [x] 修正 `TableView.test.ts` 的 `defaultDirection('marketValue')` 失敗：數字欄的判定改由單一 `NUMERIC_KEYS` 集合提供，`marketValue` 不再因未顯示而落到文字欄
@@ -203,6 +203,16 @@
 - [x] 測試：`pnl`（重量加權、缺昨收排除分母、空投組）、`storage`（`returnDisplay` 缺失／非法／合法）、`TableView`（`columnsFor`、`mapSortKey`）
 - [x] `tsc --noEmit` 與 114 個測試通過（原 109）
 - [x] 實機驗收（2026-10-18 盤外）：舊檔缺 `returnDisplay` 時開在 `%`；切換後欄頭變「總報酬金額／今日報酬金額」、逐列金額無 `NT$`、總計列變 `NT$20,000` / `NT$-20,000`；點「總報酬金額」欄頭排序再切回 `%`，`sortKey` 由 `totalReturn` 變 `totalReturnRate`、方向維持 `desc`；重啟後還原成金額模式且排序指示留在「總報酬金額」
+
+## 欄寬貼齊與動態最小視窗尺寸（2026-10-18）
+
+- [x] `table { width: max-content }`：欄寬由內容決定，不再隨視窗平均拉開（`theme.css`）
+- [x] 最小視窗尺寸改由內容推得：在縮放下限量測內容自然寬度（工具列／表格／總計列／狀態列取最大）＋垂直捲軸保留區；最小高度 = 最小寬度 × 760/1100 → `docs/adr/ADR-0016.md`
+- [x] `.board { scrollbar-gutter: stable }`：垂直捲軸出現與否不改變客戶區寬度，最小寬度不會少算一個捲軸寬
+- [x] 移除 `main.ts` 的 `MIN_WIDTH = 700` / `MIN_HEIGHT = 480`；`refresh()` 後重算，值有變才重新套用 `setSize`
+- [x] 新增表單不列入量測（表單可換行、不會水平溢出）；量測時把寬度設 0，用 `hidden` 會讓輸入框在輪詢重繪時失焦
+- [x] `scale.ts` 加 `BASE_HEIGHT` 與 `minHeightFor()`，測試涵蓋比例換算；`tsc --noEmit` 與 115 個測試通過
+- [x] 實機驗收：欄位貼齊；設定 300×200 啟動時抬到 500×345（報價載入前為 483×334）；該尺寸下 7 欄全可見、無水平捲軸；切到編輯模式（多「操作」欄）下限變 564×390 且不裁切；展開新增表單不影響下限
 
 ## 未排入 v1
 

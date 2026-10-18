@@ -15,14 +15,11 @@ import { createEditControls, parseNumber } from './ui/EditControls'
 import type { EditControls, EditMode } from './ui/EditControls'
 import { createStatusBar } from './ui/StatusBar'
 import type { StatusBar } from './ui/StatusBar'
-import { applyScale, watchResize } from './ui/scale'
+import { BASE_WIDTH, MIN_SCALE, applyScale, minHeightFor, watchResize } from './ui/scale'
 import { createTableView, defaultDirection, mapSortKey, sortRows } from './ui/TableView'
 import type { EditDraft, DraftField, TableView } from './ui/TableView'
 import './ui/theme.css'
 
-/** 與 neutralino.config.json 的 minWidth / minHeight 一致（F14） */
-const MIN_WIDTH = 700
-const MIN_HEIGHT = 480
 const SAVE_DELAY_MS = 500
 
 const root = (() => {
@@ -47,6 +44,8 @@ let mode: EditMode = 'view'
 let draft: EditDraft | null = null
 let editError: string | null = null
 let saveTimer: number | null = null
+/** 最小視窗尺寸（內容尺寸，CSS px），由內容自然寬度推得（F11、ADR-0016） */
+let minSize = { width: 0, height: 0 }
 
 let table: TableView
 let statusBar: StatusBar
@@ -84,6 +83,38 @@ function refresh(): void {
   )
   tally.textContent = `共 ${rows.length} 檔`
   statusBar.render({ status, error: loadError })
+  syncMinSize()
+}
+
+/** F11：內容（含垂直捲軸保留區）在縮放下限下的自然寬度，再換算最小視窗高度（ADR-0016） */
+function measureMinSize(): { width: number; height: number } {
+  const board = root.querySelector<HTMLElement>('.board')
+  const form = editControls.form
+
+  applyScale(BASE_WIDTH * MIN_SCALE)
+  // 新增表單可換行（flex-wrap），不會造成水平溢出，量測時排除。
+  // 不能用 hidden：那會讓輸入框在輪詢重繪時失焦
+  form.style.width = '0'
+  root.style.width = 'max-content'
+
+  const gutter = board === null ? 0 : board.offsetWidth - board.clientWidth
+  const width = Math.ceil(root.getBoundingClientRect().width + gutter)
+
+  root.style.width = ''
+  form.style.width = ''
+  applyScale(window.innerWidth)
+
+  return { width, height: minHeightFor(width) }
+}
+
+/** 內容改變時重算最小視窗尺寸；啟動後的第一次量測由 applyWindowSize 負責 */
+function syncMinSize(): void {
+  const next = measureMinSize()
+  if (next.width === minSize.width && next.height === minSize.height) return
+
+  const applied = minSize.width !== 0
+  minSize = next
+  if (applied) void applyWindowSize()
 }
 
 function sortBy(key: SortKey): void {
@@ -262,7 +293,7 @@ function buildShell(): void {
   statusBar = createStatusBar(root)
 }
 
-/** F14：視窗尺寸需套用最小尺寸限制 */
+/** F14：視窗尺寸需套用最小尺寸限制；最小尺寸由內容自然寬度推得（F11、ADR-0016） */
 async function applyWindowSize(): Promise<void> {
   // windowWidth / windowHeight 是內容尺寸（CSS px），但 setSize 收的是外框尺寸（實體 px），
   // 兩者差一個 devicePixelRatio 與標題列／邊框，直接用會讓視窗每次啟動都縮小
@@ -270,14 +301,16 @@ async function applyWindowSize(): Promise<void> {
   const outer = await neuWindow.getSize()
   const frameWidth = Math.max((outer.width ?? 0) - window.innerWidth * ratio, 0)
   const frameHeight = Math.max((outer.height ?? 0) - window.innerHeight * ratio, 0)
-  const width = Math.max(portfolio.windowWidth, MIN_WIDTH)
-  const height = Math.max(portfolio.windowHeight, MIN_HEIGHT)
+
+  if (minSize.width === 0) minSize = measureMinSize()
+  const width = Math.max(portfolio.windowWidth, minSize.width)
+  const height = Math.max(portfolio.windowHeight, minSize.height)
 
   await neuWindow.setSize({
     width: Math.round(width * ratio + frameWidth),
     height: Math.round(height * ratio + frameHeight),
-    minWidth: Math.round(MIN_WIDTH * ratio + frameWidth),
-    minHeight: Math.round(MIN_HEIGHT * ratio + frameHeight),
+    minWidth: Math.round(minSize.width * ratio + frameWidth),
+    minHeight: Math.round(minSize.height * ratio + frameHeight),
   })
 
   // setSize 送出後就回傳，實際尺寸晚一點才反映到 window.innerWidth；

@@ -75,8 +75,8 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 | 檔案 | 職責 |
 |---|---|
 | `theme.css` | 深色 design token（CSS 變數）、紅漲綠跌色票 |
-| `scale.ts` | 監聽 DOM `resize`，更新縮放用的 CSS 變數（含下限 0.85，ADR-0011） |
-| `TableView.ts` | 9 欄表格、欄頭排序、總計列、無成交列淡化、編輯模式的就地編輯與操作欄 |
+| `scale.ts` | 監聽 DOM `resize`，更新縮放用的 CSS 變數；提供縮放下限 0.85 與最小視窗高度比例（ADR-0016） |
+| `TableView.ts` | 7 欄表格（報酬欄依顯示模式二選一）、欄頭排序、總計列、無成交列淡化、編輯模式的就地編輯與操作欄 |
 | `EditControls.ts` | 工具列模式切換鈕、新增表單、強制新增逃生門、表單錯誤訊息 |
 | `StatusBar.ts` | 更新時間、來源標籤、降級警示、非當日資料標記 |
 
@@ -119,7 +119,7 @@ export interface QuoteProvider {
 main.ts
   → storage.load()                    讀 config/portfolio.json
   → symbolTable.ensureFresh()         非當日則抓兩個官方端點
-  → ui 建立（套用排序、視窗尺寸、主題、縮放）
+  → ui 建立（套用排序、視窗尺寸與內容推得的最小尺寸、主題、縮放）
   → QuoteService.start()
         若在交易時段 → 立即抓一次，之後每 5 秒
         若不在      → 抓一次即停，狀態列顯示「已收盤 / 非交易時段」
@@ -228,6 +228,8 @@ main.ts
 ```
 
 `useSavedState` 設為 `false`：視窗尺寸由 `portfolio.json` 自行管理，避免兩套來源打架。
+
+`minWidth` / `minHeight` 只在應用程式套用尺寸前有效：啟動後 `main.ts` 會以內容自然寬度推得的最小尺寸覆蓋（ADR-0016）。
 
 **已知限制**：
 
@@ -341,3 +343,4 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0013](adr/ADR-0013.md) | `window.setSize` 收外框尺寸、`net.get` 的 `timeout` 不生效 |
 | [ADR-0014](adr/ADR-0014.md) | 非交易時段首抓失敗時延遲重試一次 |
 | [ADR-0015](adr/ADR-0015.md) | 報酬欄的顯示模式切換與投組今日報酬率 |
+| [ADR-0016](adr/ADR-0016.md) | 欄寬貼齊內容，最小視窗尺寸由內容自然寬度推得 |

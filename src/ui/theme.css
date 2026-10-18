@@ -197,10 +197,13 @@ select {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  /* 垂直捲軸的保留區固定存在，客戶區寬度不會因為捲軸出現而變動（ADR-0016） */
+  scrollbar-gutter: stable;
 }
 
 table {
-  width: 100%;
+  /* 欄寬貼齊內容，不隨視窗寬度拉開；最小視窗寬度由內容自然寬度推得（F11、ADR-0016） */
+  width: max-content;
   border-collapse: collapse;
 }
 
