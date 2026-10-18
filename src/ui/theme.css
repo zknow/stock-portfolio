@@ -206,7 +206,9 @@ select {
 .board {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  /* 只有垂直捲動；水平捲動機制已移除（欄寬下限貼齊內容，不需要它，F11） */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 table {
@@ -382,7 +384,8 @@ td.actions button {
   padding: calc(3px * var(--scale)) var(--pad-x);
   border-top: 1px solid var(--line-strong);
   background: var(--surface-raised);
-  overflow-x: auto;
+  /* 水平捲動機制已移除；總計比視窗寬的內容直接裁掉（正常由貼合尺寸保證不會發生，F11） */
+  overflow: hidden;
 }
 
 .pair {
