@@ -24,6 +24,11 @@
 
   --font-ui: 'Segoe UI', 'Microsoft JhengHei', system-ui, sans-serif;
 
+  /* 捲軸：半透明，讓底下的內容底色透出來（F11 的寬度是即時量測，與配色無關）。
+     軌道透明＝不畫出一條佔位色帶，只有滑塊可見 */
+  --scroll-thumb: rgba(255, 255, 255, 0.28);
+  --scroll-track: transparent;
+
   /* F11：等比縮放因子，由 ui/scale.ts 依視窗寬度寫入 */
   --scale: 1;
   --fs-label: calc(12px * var(--scale));
@@ -40,6 +45,11 @@
 
 [hidden] {
   display: none !important;
+}
+
+/* 捲軸配色（F11；捲軸寬度由 main.ts 即時量測，這裡只改顏色不影響寬度） */
+html {
+  scrollbar-color: var(--scroll-thumb) var(--scroll-track);
 }
 
 /* 按鈕 */
