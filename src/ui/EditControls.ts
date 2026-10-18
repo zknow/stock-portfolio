@@ -1,4 +1,4 @@
-import type { Holding, Market, SymbolEntry } from '../domain/types'
+import type { Holding, Market, ReturnDisplay, SymbolEntry } from '../domain/types'
 import { isValidCode, isValidCost, isValidShares } from '../domain/validate'
 
 export type EditMode = 'view' | 'edit'
@@ -51,14 +51,16 @@ export interface EditControlsOptions {
   /** 回傳錯誤訊息；null 代表成功 */
   submit(holding: Holding): Promise<string | null>
   onModeChange(mode: EditMode): void
+  onDisplayChange(display: ReturnDisplay): void
 }
 
 export interface EditControls {
-  /** 工具列上的控制項：模式切換鈕與新增鈕 */
+  /** 工具列上的控制項：報酬顯示切換鈕、模式切換鈕與新增鈕 */
   toolbar: HTMLElement
   /** 新增表單，由呼叫端插入版面 */
   form: HTMLElement
   setMode(mode: EditMode): void
+  setDisplay(display: ReturnDisplay): void
   openAdd(): void
   setEnabled(enabled: boolean): void
 }
@@ -94,12 +96,17 @@ function button(text: string, className: string): HTMLButtonElement {
 
 export function createEditControls(options: EditControlsOptions): EditControls {
   let mode: EditMode = 'view'
+  let display: ReturnDisplay = 'rate'
   let input: AddInput = { code: '', name: '', market: 'listing', shares: '', averageCost: '' }
   /** 逃生門已展開 */
   let forcing = false
 
   const group = document.createElement('div')
   group.className = 'edit-group'
+
+  /** F6：只切換顯示，不隨 setEnabled 停用（portfolio.json 損毀時仍可切，只是不寫回） */
+  const displayButton = button('', 'ghost')
+  displayButton.addEventListener('click', () => options.onDisplayChange(display === 'rate' ? 'amount' : 'rate'))
 
   const modeButton = button('', 'ghost')
   modeButton.addEventListener('click', () => options.onModeChange(mode === 'view' ? 'edit' : 'view'))
@@ -108,7 +115,7 @@ export function createEditControls(options: EditControlsOptions): EditControls {
   addButton.hidden = true
   addButton.addEventListener('click', () => openAdd())
 
-  group.append(modeButton, addButton)
+  group.append(displayButton, modeButton, addButton)
 
   const codeInput = inputElement('add-code', '')
   const sharesInput = inputElement('add-shares', '')
@@ -285,6 +292,13 @@ export function createEditControls(options: EditControlsOptions): EditControls {
     if (next === 'view') closeAdd()
   }
 
+  function setDisplay(next: ReturnDisplay): void {
+    display = next
+    displayButton.textContent = next === 'rate' ? '%' : 'NT$'
+    displayButton.title = next === 'rate' ? '目前顯示百分比，點擊改為金額' : '目前顯示金額，點擊改為百分比'
+    displayButton.setAttribute('aria-label', '報酬顯示切換')
+  }
+
   function setEnabled(enabled: boolean): void {
     modeButton.disabled = !enabled
     modeButton.title = enabled ? '' : '無法讀取 portfolio.json，已停用編輯'
@@ -292,12 +306,14 @@ export function createEditControls(options: EditControlsOptions): EditControls {
   }
 
   setMode('view')
+  setDisplay('rate')
   reset()
 
   return {
     toolbar: group,
     form,
     setMode,
+    setDisplay,
     openAdd,
     setEnabled,
   }

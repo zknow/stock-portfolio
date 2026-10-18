@@ -18,6 +18,8 @@ export interface PnlTotals {
   totalReturn: number
   totalReturnRate: number | null
   todayReturn: number
+  /** 今日總報酬 ÷ 昨日總市值（Σ 昨收×股數），只算昨收不缺的持股（ADR-0015） */
+  todayReturnRate: number | null
   /** 估值價缺失，未計入總計的檔數 */
   excludedCount: number
   /** 昨收缺失，未計入今日總報酬的檔數 */
@@ -52,6 +54,7 @@ export function computeTotals(rows: PnlRow[]): PnlTotals {
   let marketValue = 0
   let totalReturn = 0
   let todayReturn = 0
+  let todayBase = 0
   let excludedCount = 0
   let todayExcludedCount = 0
 
@@ -69,6 +72,8 @@ export function computeTotals(rows: PnlRow[]): PnlTotals {
       todayExcludedCount += 1
     } else {
       todayReturn += row.todayReturn
+      // 昨日市值 = 今日市值 − 今日報酬，不必回頭讀 quote
+      todayBase += row.marketValue - row.todayReturn
     }
   }
 
@@ -78,6 +83,7 @@ export function computeTotals(rows: PnlRow[]): PnlTotals {
     totalReturn,
     totalReturnRate: cost === 0 ? null : totalReturn / cost,
     todayReturn,
+    todayReturnRate: todayBase === 0 ? null : todayReturn / todayBase,
     excludedCount,
     todayExcludedCount,
   }

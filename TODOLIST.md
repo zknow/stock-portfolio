@@ -160,7 +160,7 @@
 - **紅漲綠跌反過來約束了整個介面的狀態色**：警示不能用紅或橙紅（會被讀成「漲」），改用琥珀 `--warn`；互動焦點改用鋼藍 `--accent`。紅綠在介面上只代表漲跌
 - `window.setSize` 的 `width` / `height` 是**內容尺寸**，不含標題列與外框。存 `window.innerWidth`、還原用 `setSize`，兩者同一基準才不會逐次縮小 → **此結論錯誤**：`setSize` 收的是外框尺寸（實體 px）。已於「啟動抓價與視窗尺寸修正」改為換算後再呼叫，見 ADR-0013
 - F11 的等比縮放原本沒有下限：視窗收到最小 700 寬時，13px 的表格字級會縮到約 8.3px。已於「P4a 後續修正」加上下限 0.85（ADR-0011）
-- `PnlTotals` 只有 `todayReturn`，沒有今日報酬率欄位；總計列因此只顯示 F12 列的「今日總報酬」金額
+- `PnlTotals` 只有 `todayReturn`，沒有今日報酬率欄位；總計列因此只顯示 F12 列的「今日總報酬」金額 → 已於「報酬欄顯示模式切換」補上 `todayReturnRate`（ADR-0015）
 - `src/ui/*.test.ts` 於 P4a 後續修正補上（`scale.test.ts`、`TableView.test.ts`、`EditControls.test.ts`），`README.md` 與 `AGENTS.md` 的測試範圍已同步納入 `src/ui` 的純函式
 - `resources/icons/appIcon.png` 的 P1 幾何 placeholder（紅漲綠跌三柱）已於 P5 前換成正式圖示，見 P5 段
 
@@ -192,6 +192,17 @@
 - **打包後的 exe 以「行程工作目錄」解析相對路徑，不是 exe 所在目錄。** `config/` 與 `logs/` 都走相對路徑，因此從別的目錄啟動 exe（例：`Start-Process` 未指定 `-WorkingDirectory`）時，資料會落在該目錄而非 `dist/stock-portfolio/`。雙擊執行時兩者相同，故不影響一般使用。若要固定，需以 `os.getPath` 取得 exe 目錄再組絕對路徑，屬新的技術決策
 - `NE_RS_UNBLDRE: Unable to load application resource file /build/favicon.ico`：webview 會自動請求 `/favicon.ico`，`resources/` 內沒有此檔。只出現在框架的 `neutralinojs.log`，不影響運作
 - `dist/stock-portfolio/neutralinojs.log` 是框架自己寫的，與 `logs/app.log` 無關，兩者不要混淆
+
+## 報酬欄顯示模式切換（2026-10-18）
+
+- [x] 兩個報酬欄改為「比率 / 金額」二選一（F1：檢視模式由 9 欄降為 7 欄），欄頭文字與總計列跟著模式變 → `docs/adr/ADR-0015.md`
+- [x] 新增投組今日報酬率 = 今日總報酬 ÷ 昨日總市值（Σ 昨收 × 股數），只算昨收不缺的持股，分母 0 顯示 `—`；`PnlTotals` 加 `todayReturnRate`（分母以 `marketValue − todayReturn` 求得） → 同步 F12、`glossary.md`
+- [x] `portfolio.json` 加 `returnDisplay`（預設 `rate`），`schemaVersion` 維持 1（缺欄位或非法值回預設）
+- [x] 切換時排序鍵在 `totalReturn` ↔ `totalReturnRate`、`todayReturn` ↔ `todayReturnRate` 之間對映，方向不變 → 同步 F13、`TableView.mapSortKey`
+- [x] 工具列加顯示切換鈕（顯示當前單位 `%` / `NT$`）；`portfolio.json` 損毀時仍可切換，只是不寫回（沿用 `scheduleSave` 的既有保護）
+- [x] 測試：`pnl`（重量加權、缺昨收排除分母、空投組）、`storage`（`returnDisplay` 缺失／非法／合法）、`TableView`（`columnsFor`、`mapSortKey`）
+- [x] `tsc --noEmit` 與 114 個測試通過（原 109）
+- [x] 實機驗收（2026-10-18 盤外）：舊檔缺 `returnDisplay` 時開在 `%`；切換後欄頭變「總報酬金額／今日報酬金額」、逐列金額無 `NT$`、總計列變 `NT$20,000` / `NT$-20,000`；點「總報酬金額」欄頭排序再切回 `%`，`sortKey` 由 `totalReturn` 變 `totalReturnRate`、方向維持 `desc`；重啟後還原成金額模式且排序指示留在「總報酬金額」
 
 ## 未排入 v1
 

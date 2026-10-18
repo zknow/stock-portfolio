@@ -157,6 +157,18 @@ main.ts
 
 編輯期間 5 秒輪詢照常重繪表格。輸入中的草稿由 `main.ts` 持有、`TableView` 於重繪時還原焦點與游標位置，因此重繪不會清掉使用者打到一半的內容（F4）。
 
+### 5.4 報酬顯示切換
+
+```
+使用者按工具列的顯示切換鈕（檢視模式亦可用）
+  → 切換 portfolio.returnDisplay（rate / amount）
+  → 排序鍵若落在被隱藏的報酬欄，改寫成同組的另一個（F13）
+  → TableView 重建表頭（欄數與欄頭文字跟著模式）→ 重繪
+  → storage.save()
+```
+
+舊檔沒有 `returnDisplay` 時視為 `rate`；`portfolio.json` 損毀時切換仍即時生效，但不寫回原檔（見 §8）。
+
 ## 6. 檔案格式
 
 ### 6.1 `config/portfolio.json`
@@ -166,6 +178,7 @@ main.ts
   "schemaVersion": 1,
   "sortKey": "marketValue",
   "sortDirection": "desc",
+  "returnDisplay": "rate",
   "windowWidth": 1100,
   "windowHeight": 760,
   "holdings": [
@@ -175,6 +188,8 @@ main.ts
 ```
 
 `schemaVersion` 供日後遷移使用，載入時若版本不符則執行遷移後回寫。
+
+`returnDisplay` 是報酬欄的顯示模式（`rate` / `amount`，見 ADR-0015）。舊檔缺少此欄位或值不合法時視為 `rate`，屬向後相容，因此不升 `schemaVersion`。
 
 `windowWidth` / `windowHeight` 是**內容尺寸（CSS px）**，等於 `window.innerWidth` / `innerHeight`；還原時要換算成 `window.setSize` 收的外框尺寸，見 ADR-0013。
 
@@ -325,3 +340,4 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0012](adr/ADR-0012.md) | 編輯介面採就地編輯與系統原生確認對話框 |
 | [ADR-0013](adr/ADR-0013.md) | `window.setSize` 收外框尺寸、`net.get` 的 `timeout` 不生效 |
 | [ADR-0014](adr/ADR-0014.md) | 非交易時段首抓失敗時延遲重試一次 |
+| [ADR-0015](adr/ADR-0015.md) | 報酬欄的顯示模式切換與投組今日報酬率 |

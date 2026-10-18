@@ -1,7 +1,7 @@
 import { MISSING, directionOf, formatAmount, formatPrice, formatRate, formatShares } from '../domain/format'
 import type { Direction } from '../domain/format'
 import type { PnlRow, PnlTotals } from '../domain/pnl'
-import type { SortDirection, SortKey } from '../domain/types'
+import type { ReturnDisplay, SortDirection, SortKey } from '../domain/types'
 import type { EditMode } from './EditControls'
 
 interface Column {
@@ -9,18 +9,42 @@ interface Column {
   label: string
 }
 
-/** F1：檢視模式可見欄位固定 9 欄，順序即此處的順序 */
-const COLUMNS: Column[] = [
+/** F1：順序即此處的順序。兩個報酬欄依顯示模式二選一（ADR-0015） */
+const BASE_COLUMNS: Column[] = [
   { key: 'code', label: '代號' },
   { key: 'name', label: '名稱' },
   { key: 'shares', label: '股數' },
   { key: 'averageCost', label: '平均成本' },
   { key: 'price', label: '現價' },
-  { key: 'totalReturn', label: '總報酬金額' },
-  { key: 'totalReturnRate', label: '總報酬率' },
-  { key: 'todayReturn', label: '今日報酬金額' },
-  { key: 'todayReturnRate', label: '今日報酬率' },
 ]
+
+const RETURN_COLUMNS: Record<ReturnDisplay, Column[]> = {
+  rate: [
+    { key: 'totalReturnRate', label: '總報酬率' },
+    { key: 'todayReturnRate', label: '今日報酬率' },
+  ],
+  amount: [
+    { key: 'totalReturn', label: '總報酬金額' },
+    { key: 'todayReturn', label: '今日報酬金額' },
+  ],
+}
+
+export function columnsFor(display: ReturnDisplay): Column[] {
+  return [...BASE_COLUMNS, ...RETURN_COLUMNS[display]]
+}
+
+/** 同一個指標的兩個排序鍵：金額與比率 */
+const RETURN_KEY_PAIRS: ReadonlyArray<readonly [SortKey, SortKey]> = [
+  ['totalReturn', 'totalReturnRate'],
+  ['todayReturn', 'todayReturnRate'],
+]
+
+/** 切換顯示模式時，被隱藏的排序鍵換成同組的另一個，方向不變（F13、ADR-0015） */
+export function mapSortKey(key: SortKey, display: ReturnDisplay): SortKey {
+  const pair = RETURN_KEY_PAIRS.find((keys) => keys.includes(key))
+  if (pair === undefined) return key
+  return display === 'rate' ? pair[1] : pair[0]
+}
 
 /** 數字欄：決定欄頭對齊與首次點擊的方向。`marketValue` 不顯示但仍為數字欄 */
 const NUMERIC_KEYS: ReadonlySet<SortKey> = new Set<SortKey>([
@@ -79,7 +103,7 @@ export interface TableHandlers {
 }
 
 export interface TableView {
-  render(rows: PnlRow[], totals: PnlTotals, sort: SortState, edit: TableEdit): void
+  render(rows: PnlRow[], totals: PnlTotals, sort: SortState, edit: TableEdit, display: ReturnDisplay): void
 }
 
 /** 首次點擊某欄時的起始方向：數字欄遞減，文字欄遞增 */
@@ -218,7 +242,12 @@ function actionsCell(row: PnlRow, edit: TableEdit, handlers: TableHandlers): HTM
   return element
 }
 
-function rowFor(row: PnlRow, edit: TableEdit, handlers: TableHandlers): HTMLTableRowElement {
+function rowFor(
+  row: PnlRow,
+  edit: TableEdit,
+  handlers: TableHandlers,
+  display: ReturnDisplay,
+): HTMLTableRowElement {
   const element = document.createElement('tr')
   if (row.quote !== null && !row.quote.traded) element.className = 'untraded'
 
@@ -229,13 +258,23 @@ function rowFor(row: PnlRow, edit: TableEdit, handlers: TableHandlers): HTMLTabl
     editableCell(row, edit, handlers, 'shares'),
     editableCell(row, edit, handlers, 'averageCost'),
     priceCell(row),
-    valueCell(row.totalReturn, formatAmount(row.totalReturn)),
-    valueCell(row.totalReturnRate, formatRate(row.totalReturnRate)),
-    valueCell(row.todayReturn, formatAmount(row.todayReturn)),
-    valueCell(row.todayReturnRate, formatRate(row.todayReturnRate)),
+    ...returnCells(row, display),
     actionsCell(row, edit, handlers),
   )
   return element
+}
+
+/** 兩個報酬欄依顯示模式二選一（F6） */
+function returnCells(row: PnlRow, display: ReturnDisplay): HTMLTableCellElement[] {
+  return display === 'rate'
+    ? [
+        valueCell(row.totalReturnRate, formatRate(row.totalReturnRate)),
+        valueCell(row.todayReturnRate, formatRate(row.todayReturnRate)),
+      ]
+    : [
+        valueCell(row.totalReturn, formatAmount(row.totalReturn)),
+        valueCell(row.todayReturn, formatAmount(row.todayReturn)),
+      ]
 }
 
 function pair(label: string, text: string, direction: Direction): HTMLElement {
@@ -247,6 +286,19 @@ function pair(label: string, text: string, direction: Direction): HTMLElement {
 
   box.append(span(label, 'label'), value)
   return box
+}
+
+/** 總計列的兩個報酬項目跟著顯示模式（F12）。總成本與總市值不受影響 */
+function returnPairs(values: PnlTotals, display: ReturnDisplay): HTMLElement[] {
+  return display === 'rate'
+    ? [
+        pair('總報酬率', formatRate(values.totalReturnRate), directionOf(values.totalReturnRate)),
+        pair('今日報酬率', formatRate(values.todayReturnRate), directionOf(values.todayReturnRate)),
+      ]
+    : [
+        pair('總報酬金額', `NT$${formatAmount(values.totalReturn)}`, directionOf(values.totalReturn)),
+        pair('今日報酬金額', `NT$${formatAmount(values.todayReturn)}`, directionOf(values.todayReturn)),
+      ]
 }
 
 interface FocusSnapshot {
@@ -267,28 +319,35 @@ function captureFocus(): FocusSnapshot | null {
 }
 
 export function createTableView(host: HTMLElement, handlers: TableHandlers): TableView {
-  const headRow = document.createElement('tr')
-  const headers = COLUMNS.map((column) => {
-    const th = document.createElement('th')
-    if (NUMERIC_KEYS.has(column.key)) th.className = 'numeric'
-
-    const button = document.createElement('button')
-    button.type = 'button'
-    button.textContent = column.label
-    button.addEventListener('click', () => handlers.sort(column.key))
-
-    th.append(button)
-    headRow.append(th)
-    return { column, th }
-  })
-
-  const actionsHead = document.createElement('th')
-  actionsHead.className = 'actions'
-  actionsHead.textContent = '操作'
-  headRow.append(actionsHead)
-
   const head = document.createElement('thead')
-  head.append(headRow)
+  let headers: Array<{ column: Column; th: HTMLTableCellElement }> = []
+  let actionsHead = document.createElement('th')
+  let shownDisplay: ReturnDisplay | null = null
+
+  /** 欄數與欄頭文字都跟著顯示模式走，只在切換時重建（ADR-0015） */
+  function buildHead(display: ReturnDisplay): void {
+    shownDisplay = display
+    const headRow = document.createElement('tr')
+
+    headers = columnsFor(display).map((column) => {
+      const th = document.createElement('th')
+      if (NUMERIC_KEYS.has(column.key)) th.className = 'numeric'
+
+      const toggle = button(column.label, '')
+      toggle.addEventListener('click', () => handlers.sort(column.key))
+
+      th.append(toggle)
+      headRow.append(th)
+      return { column, th }
+    })
+
+    actionsHead = document.createElement('th')
+    actionsHead.className = 'actions'
+    actionsHead.textContent = '操作'
+    headRow.append(actionsHead)
+
+    head.replaceChildren(headRow)
+  }
 
   const body = document.createElement('tbody')
   const table = document.createElement('table')
@@ -328,8 +387,10 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
   }
 
   return {
-    render(rows, values, sort, edit) {
+    render(rows, values, sort, edit, display) {
       const focus = captureFocus()
+
+      if (shownDisplay !== display) buildHead(display)
 
       for (const { column, th } of headers) {
         if (column.key === sort.key) {
@@ -340,7 +401,7 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
       }
       actionsHead.hidden = edit.mode !== 'edit'
 
-      body.replaceChildren(...rows.map((row) => rowFor(row, edit, handlers)))
+      body.replaceChildren(...rows.map((row) => rowFor(row, edit, handlers, display)))
 
       const isEmpty = rows.length === 0
       table.hidden = isEmpty
@@ -359,9 +420,7 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
       totals.replaceChildren(
         pair('總成本', `NT$${formatAmount(values.cost)}`, 'flat'),
         pair('總市值', `NT$${formatAmount(values.marketValue)}`, 'flat'),
-        pair('總報酬金額', `NT$${formatAmount(values.totalReturn)}`, directionOf(values.totalReturn)),
-        pair('總報酬率', formatRate(values.totalReturnRate), directionOf(values.totalReturnRate)),
-        pair('今日報酬金額', `NT$${formatAmount(values.todayReturn)}`, directionOf(values.todayReturn)),
+        ...returnPairs(values, display),
         notes,
       )
 

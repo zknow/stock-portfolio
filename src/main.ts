@@ -2,7 +2,7 @@ import { app, events, init, os, window as neuWindow } from '@neutralinojs/lib'
 import type { Icon, MessageBoxChoice } from '@neutralinojs/lib'
 import { computePnlRow, computeTotals } from './domain/pnl'
 import type { PnlRow } from './domain/pnl'
-import type { Holding, Quote, QuoteBatch, QuoteTarget, SortKey } from './domain/types'
+import type { Holding, Quote, QuoteBatch, QuoteTarget, ReturnDisplay, SortKey } from './domain/types'
 import { isValidCost, isValidShares } from './domain/validate'
 import { log } from './services/logger'
 import { createQuoteService } from './services/quote/QuoteService'
@@ -16,7 +16,7 @@ import type { EditControls, EditMode } from './ui/EditControls'
 import { createStatusBar } from './ui/StatusBar'
 import type { StatusBar } from './ui/StatusBar'
 import { applyScale, watchResize } from './ui/scale'
-import { createTableView, defaultDirection, sortRows } from './ui/TableView'
+import { createTableView, defaultDirection, mapSortKey, sortRows } from './ui/TableView'
 import type { EditDraft, DraftField, TableView } from './ui/TableView'
 import './ui/theme.css'
 
@@ -80,6 +80,7 @@ function refresh(): void {
     computeTotals(rows),
     { key: sortKey, direction: sortDirection },
     { mode, draft, error: editError },
+    portfolio.returnDisplay,
   )
   tally.textContent = `共 ${rows.length} 檔`
   statusBar.render({ status, error: loadError })
@@ -94,6 +95,14 @@ function sortBy(key: SortKey): void {
       : defaultDirection(key)
 
   portfolio = { ...portfolio, sortKey: key, sortDirection: direction }
+  refresh()
+  scheduleSave()
+}
+
+/** F6：切換金額／百分比顯示，並把被隱藏的排序鍵換成同組的另一個（F13） */
+function setDisplay(display: ReturnDisplay): void {
+  portfolio = { ...portfolio, returnDisplay: display, sortKey: mapSortKey(portfolio.sortKey, display) }
+  editControls.setDisplay(display)
   refresh()
   scheduleSave()
 }
@@ -235,6 +244,7 @@ function buildShell(): void {
     exists: (code) => findHolding(code) !== undefined,
     submit: addHolding,
     onModeChange: setMode,
+    onDisplayChange: setDisplay,
   })
 
   toolbar.append(title, tally, editControls.toolbar)
@@ -288,6 +298,7 @@ async function main(): Promise<void> {
   portfolio = loaded.file
   loadError = loaded.error
   editControls.setEnabled(loadError === null)
+  editControls.setDisplay(portfolio.returnDisplay)
   refresh()
 
   watchResize()

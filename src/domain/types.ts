@@ -58,9 +58,13 @@ export type SortKey = (typeof SORT_KEYS)[number]
 
 export type SortDirection = 'asc' | 'desc'
 
+/** 報酬欄的顯示模式：比率（預設）或金額（F6、ADR-0015） */
+export type ReturnDisplay = 'rate' | 'amount'
+
 export interface UiPreferences {
   sortKey: SortKey
   sortDirection: SortDirection
+  returnDisplay: ReturnDisplay
   windowWidth: number
   windowHeight: number
 }

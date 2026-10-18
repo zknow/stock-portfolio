@@ -1,6 +1,6 @@
 import { filesystem } from '@neutralinojs/lib'
 import { SORT_KEYS } from '../domain/types'
-import type { Holding, SortKey, UiPreferences } from '../domain/types'
+import type { Holding, ReturnDisplay, SortKey, UiPreferences } from '../domain/types'
 import { isValidCode, isValidCost, isValidShares } from '../domain/validate'
 import { ensureDirectory } from './fsutil'
 import { errorText, log } from './logger'
@@ -12,6 +12,7 @@ export const PORTFOLIO_PATH = 'config/portfolio.json'
 export const DEFAULT_PREFERENCES: UiPreferences = {
   sortKey: 'marketValue',
   sortDirection: 'desc',
+  returnDisplay: 'rate',
   windowWidth: 1100,
   windowHeight: 760,
 }
@@ -53,6 +54,11 @@ function readSize(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
 }
 
+/** 舊檔沒有這個欄位，非法值一律回預設（ADR-0015） */
+function readReturnDisplay(value: unknown): ReturnDisplay {
+  return value === 'amount' || value === 'rate' ? value : DEFAULT_PREFERENCES.returnDisplay
+}
+
 export function parsePortfolio(text: string): PortfolioFile {
   const payload: unknown = JSON.parse(text)
   if (typeof payload !== 'object' || payload === null) throw new Error('portfolio.json 的頂層不是物件')
@@ -72,6 +78,7 @@ export function parsePortfolio(text: string): PortfolioFile {
     schemaVersion: SCHEMA_VERSION,
     sortKey: readSortKey(record.sortKey),
     sortDirection: record.sortDirection === 'asc' ? 'asc' : 'desc',
+    returnDisplay: readReturnDisplay(record.returnDisplay),
     windowWidth: readSize(record.windowWidth, DEFAULT_PREFERENCES.windowWidth),
     windowHeight: readSize(record.windowHeight, DEFAULT_PREFERENCES.windowHeight),
     holdings: holdings.filter((holding): holding is Holding => holding !== null),

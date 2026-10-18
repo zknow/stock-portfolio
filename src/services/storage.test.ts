@@ -47,6 +47,14 @@ describe('parsePortfolio', () => {
     expect(file.windowHeight).toBe(DEFAULT_PREFERENCES.windowHeight)
   })
 
+  it('returnDisplay 缺失或非法時回預設，合法值原樣讀出', () => {
+    expect(parsePortfolio(JSON.stringify(VALID)).returnDisplay).toBe(DEFAULT_PREFERENCES.returnDisplay)
+    expect(parsePortfolio(JSON.stringify({ ...VALID, returnDisplay: 'amount' })).returnDisplay).toBe('amount')
+    expect(parsePortfolio(JSON.stringify({ ...VALID, returnDisplay: '百分比' })).returnDisplay).toBe(
+      DEFAULT_PREFERENCES.returnDisplay,
+    )
+  })
+
   it('持股不合法時視為損毀', () => {
     expect(() => parsePortfolio(JSON.stringify({ ...VALID, holdings: [{ code: '2330' }] }))).toThrow('不合法的持股')
     expect(() => parsePortfolio(JSON.stringify({ ...VALID, holdings: [{ ...VALID.holdings[0], shares: 0 }] }))).toThrow(

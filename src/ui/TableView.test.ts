@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { computePnlRow } from '../domain/pnl'
 import type { PnlRow } from '../domain/pnl'
 import type { Holding, Quote } from '../domain/types'
-import { defaultDirection, sortRows } from './TableView'
+import { defaultDirection, columnsFor, mapSortKey, sortRows } from './TableView'
 
 function row(code: string, price: number | null, previousClose: number | null): PnlRow {
   const holding: Holding = { code, name: `名${code}`, market: 'listing', shares: 1000, averageCost: 100 }
@@ -61,5 +61,29 @@ describe('defaultDirection', () => {
     expect(defaultDirection('todayReturnRate')).toBe('desc')
     expect(defaultDirection('code')).toBe('asc')
     expect(defaultDirection('name')).toBe('asc')
+  })
+})
+
+describe('columnsFor', () => {
+  it('兩個報酬欄依顯示模式二選一', () => {
+    const keys = (display: 'rate' | 'amount'): string[] => columnsFor(display).map((column) => column.key)
+
+    expect(keys('rate')).toEqual(['code', 'name', 'shares', 'averageCost', 'price', 'totalReturnRate', 'todayReturnRate'])
+    expect(keys('amount')).toEqual(['code', 'name', 'shares', 'averageCost', 'price', 'totalReturn', 'todayReturn'])
+  })
+
+  it('欄頭文字跟著模式變', () => {
+    expect(columnsFor('rate').at(-1)?.label).toBe('今日報酬率')
+    expect(columnsFor('amount').at(-1)?.label).toBe('今日報酬金額')
+  })
+})
+
+describe('mapSortKey', () => {
+  it('切換時把被隱藏的報酬鍵換成同組的另一個', () => {
+    expect(mapSortKey('totalReturn', 'rate')).toBe('totalReturnRate')
+    expect(mapSortKey('totalReturnRate', 'rate')).toBe('totalReturnRate')
+    expect(mapSortKey('todayReturnRate', 'amount')).toBe('todayReturn')
+    expect(mapSortKey('marketValue', 'amount')).toBe('marketValue')
+    expect(mapSortKey('code', 'rate')).toBe('code')
   })
 })

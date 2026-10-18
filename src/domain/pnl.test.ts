@@ -87,9 +87,10 @@ describe('computeTotals', () => {
     expect(totals.totalReturn).toBe(100000)
     expect(totals.totalReturnRate).toBeCloseTo(0.2, 10)
     expect(totals.todayReturn).toBe(10000)
+    expect(totals.todayReturnRate).toBeCloseTo(10000 / 590000, 10)
   })
 
-  it('昨收缺失的持股不計入今日總報酬，但計入其他總計', () => {
+  it('昨收缺失的持股不計入今日總報酬，也不進今日報酬率的分母', () => {
     const noPreviousClose = computePnlRow(
       holding(1000, 500),
       buildQuote({ code: '2330', price: 600, previousClose: null, dataDate: '20261016' }),
@@ -100,6 +101,24 @@ describe('computeTotals', () => {
     expect(totals.todayExcludedCount).toBe(1)
     expect(totals.marketValue).toBe(600000)
     expect(totals.todayReturn).toBe(0)
+    expect(totals.todayReturnRate).toBeNull()
+  })
+
+  it('今日總報酬率以昨收市值加權，不是逐列比率的平均', () => {
+    // 昨收 100 → 現價 101（+1%）、昨收 200 → 現價 194（−3%），各 1000 股
+    const up = computePnlRow(
+      holding(1000, 50),
+      buildQuote({ code: '2330', price: 101, previousClose: 100, dataDate: '20261016' }),
+    )
+    const down = computePnlRow(
+      holding(1000, 50),
+      buildQuote({ code: '2412', price: 194, previousClose: 200, dataDate: '20261016' }),
+    )
+    const totals = computeTotals([up, down])
+
+    expect(totals.todayReturn).toBe(-5000)
+    expect(totals.todayReturnRate).toBeCloseTo(-5000 / 300000, 10)
+    expect(totals.todayReturnRate).not.toBeCloseTo(-0.01, 6)
   })
 
   it('空投組的總報酬率為 null', () => {
@@ -108,5 +127,6 @@ describe('computeTotals', () => {
     expect(totals.cost).toBe(0)
     expect(totals.totalReturn).toBe(0)
     expect(totals.totalReturnRate).toBeNull()
+    expect(totals.todayReturnRate).toBeNull()
   })
 })
