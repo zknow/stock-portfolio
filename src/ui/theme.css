@@ -200,8 +200,9 @@ select {
 }
 
 table {
-  /* 欄寬貼齊內容，不隨視窗寬度拉開；最小視窗寬度由內容自然寬度推得（F11、ADR-0016） */
+  /* 欄寬下限貼齊內容，視窗比內容寬時欄位一起拉寬填滿（F11、ADR-0017） */
   width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
 }
 

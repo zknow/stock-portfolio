@@ -341,4 +341,5 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0013](adr/ADR-0013.md) | `window.setSize` 收外框尺寸、`net.get` 的 `timeout` 不生效 |
 | [ADR-0014](adr/ADR-0014.md) | 非交易時段首抓失敗時延遲重試一次 |
 | [ADR-0015](adr/ADR-0015.md) | 報酬欄的顯示模式切換與投組今日報酬率 |
-| [ADR-0016](adr/ADR-0016.md) | 欄寬貼齊內容，視窗尺寸由內容自然寬度推得 |
+| [ADR-0016](adr/ADR-0016.md) | 欄寬貼齊內容，視窗尺寸由內容自然寬度推得（不隨視窗拉開已由 ADR-0017 取代） |
+| [ADR-0017](adr/ADR-0017.md) | 欄寬下限貼齊內容、比內容寬時欄位一起拉寬填滿邊界 |
