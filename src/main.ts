@@ -86,7 +86,7 @@ function refresh(): void {
   syncMinSize()
 }
 
-/** F11：內容（含垂直捲軸保留區）在縮放下限下的自然寬度，再換算最小視窗高度（ADR-0016） */
+/** F11：內容在縮放下限下的自然寬度，加上目前的垂直捲軸寬度即視窗需要的寬度（ADR-0016） */
 function measureMinSize(): { width: number; height: number } {
   const board = root.querySelector<HTMLElement>('.board')
   const form = editControls.form
@@ -97,6 +97,7 @@ function measureMinSize(): { width: number; height: number } {
   form.style.width = '0'
   root.style.width = 'max-content'
 
+  // 垂直捲軸佔用的寬度（沒有捲軸時為 0）。量測時的高度與實際相同，捲軸出現與否一致
   const gutter = board === null ? 0 : board.offsetWidth - board.clientWidth
   const width = Math.ceil(root.getBoundingClientRect().width + gutter)
 
@@ -107,7 +108,7 @@ function measureMinSize(): { width: number; height: number } {
   return { width, height: minHeightFor(width) }
 }
 
-/** 內容改變時重算最小視窗尺寸；啟動後的第一次量測由 applyWindowSize 負責 */
+/** 內容改變時重算視窗尺寸；啟動後的第一次量測由 applyWindowSize 負責 */
 function syncMinSize(): void {
   const next = measureMinSize()
   if (next.width === minSize.width && next.height === minSize.height) return
@@ -302,19 +303,31 @@ async function applyWindowSize(): Promise<void> {
   const frameWidth = Math.max((outer.width ?? 0) - window.innerWidth * ratio, 0)
   const frameHeight = Math.max((outer.height ?? 0) - window.innerHeight * ratio, 0)
 
-  if (minSize.width === 0) minSize = measureMinSize()
+  // 高度改變會讓垂直捲軸出現或消失，可用寬度跟著差一個捲軸寬；套用後再量一次收斂
+  for (let pass = 0; pass < 2; pass++) {
+    if (minSize.width === 0) minSize = measureMinSize()
 
-  await neuWindow.setSize({
-    width: Math.round(minSize.width * ratio + frameWidth),
-    height: Math.round(minSize.height * ratio + frameHeight),
-    minWidth: Math.round(minSize.width * ratio + frameWidth),
-    minHeight: Math.round(minSize.height * ratio + frameHeight),
-  })
+    await neuWindow.setSize({
+      width: Math.round(minSize.width * ratio + frameWidth),
+      height: Math.round(minSize.height * ratio + frameHeight),
+      minWidth: Math.round(minSize.width * ratio + frameWidth),
+      minHeight: Math.round(minSize.height * ratio + frameHeight),
+    })
+    await settleWindow()
 
-  // setSize 送出後就回傳，實際尺寸晚一點才反映到 window.innerWidth；
-  // 不等它穩定，啟動記錄會記到調整前的舊尺寸
+    const settled = measureMinSize()
+    if (settled.width === minSize.width && settled.height === minSize.height) return
+    minSize = settled
+  }
+}
+
+/** setSize 送出後就回傳，等 window.innerWidth / innerHeight 不再變動才回傳（最多 500 ms） */
+async function settleWindow(): Promise<void> {
+  let last = ''
   for (let waited = 0; waited < 500; waited += 50) {
-    if (window.innerWidth === minSize.width && window.innerHeight === minSize.height) break
+    const now = `${window.innerWidth}×${window.innerHeight}`
+    if (now === last) return
+    last = now
     await new Promise((resolve) => setTimeout(resolve, 50))
   }
 }
