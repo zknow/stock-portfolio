@@ -360,16 +360,15 @@ td.actions button {
   font-size: var(--fs-label);
 }
 
-/* F12 投組總計列：兩欄兩列（總成本／總市值、總報酬率／今日報酬率），避免總計撐出比表格更寬的視窗（F11、ADR-0016） */
+/* F12 投組總計列：兩欄兩列（總成本／總市值、總報酬率／今日報酬率），避免總計撐出比表格更寬的視窗（F11、ADR-0016）；上下不留多餘空白 */
 .totals {
   display: grid;
   grid-template-columns: auto auto;
   justify-content: start;
   align-items: baseline;
   column-gap: calc(18px * var(--scale));
-  row-gap: calc(2px * var(--scale));
   flex: none;
-  padding: calc(9px * var(--scale)) var(--pad-x);
+  padding: calc(3px * var(--scale)) var(--pad-x);
   border-top: 1px solid var(--line-strong);
   background: var(--surface-raised);
   overflow-x: auto;
