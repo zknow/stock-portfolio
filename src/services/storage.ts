@@ -13,8 +13,6 @@ export const DEFAULT_PREFERENCES: UiPreferences = {
   sortKey: 'marketValue',
   sortDirection: 'desc',
   returnDisplay: 'rate',
-  windowWidth: 1100,
-  windowHeight: 760,
 }
 
 export interface PortfolioFile extends UiPreferences {
@@ -50,10 +48,6 @@ function readSortKey(value: unknown): SortKey {
     : DEFAULT_PREFERENCES.sortKey
 }
 
-function readSize(value: unknown, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : fallback
-}
-
 /** 舊檔沒有這個欄位，非法值一律回預設（ADR-0015） */
 function readReturnDisplay(value: unknown): ReturnDisplay {
   return value === 'amount' || value === 'rate' ? value : DEFAULT_PREFERENCES.returnDisplay
@@ -79,8 +73,6 @@ export function parsePortfolio(text: string): PortfolioFile {
     sortKey: readSortKey(record.sortKey),
     sortDirection: record.sortDirection === 'asc' ? 'asc' : 'desc',
     returnDisplay: readReturnDisplay(record.returnDisplay),
-    windowWidth: readSize(record.windowWidth, DEFAULT_PREFERENCES.windowWidth),
-    windowHeight: readSize(record.windowHeight, DEFAULT_PREFERENCES.windowHeight),
     holdings: holdings.filter((holding): holding is Holding => holding !== null),
   }
 }

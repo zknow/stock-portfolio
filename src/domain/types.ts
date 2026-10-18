@@ -65,6 +65,4 @@ export interface UiPreferences {
   sortKey: SortKey
   sortDirection: SortDirection
   returnDisplay: ReturnDisplay
-  windowWidth: number
-  windowHeight: number
 }

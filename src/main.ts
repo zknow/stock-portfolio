@@ -293,9 +293,9 @@ function buildShell(): void {
   statusBar = createStatusBar(root)
 }
 
-/** F14：視窗尺寸需套用最小尺寸限制；最小尺寸由內容自然寬度推得（F11、ADR-0016） */
+/** F11：把視窗調到貼合內容（啟動與內容變動時都套用，ADR-0016） */
 async function applyWindowSize(): Promise<void> {
-  // windowWidth / windowHeight 是內容尺寸（CSS px），但 setSize 收的是外框尺寸（實體 px），
+  // minSize 是內容尺寸（CSS px），但 setSize 收的是外框尺寸（實體 px），
   // 兩者差一個 devicePixelRatio 與標題列／邊框，直接用會讓視窗每次啟動都縮小
   const ratio = window.devicePixelRatio || 1
   const outer = await neuWindow.getSize()
@@ -303,12 +303,10 @@ async function applyWindowSize(): Promise<void> {
   const frameHeight = Math.max((outer.height ?? 0) - window.innerHeight * ratio, 0)
 
   if (minSize.width === 0) minSize = measureMinSize()
-  const width = Math.max(portfolio.windowWidth, minSize.width)
-  const height = Math.max(portfolio.windowHeight, minSize.height)
 
   await neuWindow.setSize({
-    width: Math.round(width * ratio + frameWidth),
-    height: Math.round(height * ratio + frameHeight),
+    width: Math.round(minSize.width * ratio + frameWidth),
+    height: Math.round(minSize.height * ratio + frameHeight),
     minWidth: Math.round(minSize.width * ratio + frameWidth),
     minHeight: Math.round(minSize.height * ratio + frameHeight),
   })
@@ -316,7 +314,7 @@ async function applyWindowSize(): Promise<void> {
   // setSize 送出後就回傳，實際尺寸晚一點才反映到 window.innerWidth；
   // 不等它穩定，啟動記錄會記到調整前的舊尺寸
   for (let waited = 0; waited < 500; waited += 50) {
-    if (window.innerWidth === width && window.innerHeight === height) break
+    if (window.innerWidth === minSize.width && window.innerHeight === minSize.height) break
     await new Promise((resolve) => setTimeout(resolve, 50))
   }
 }
@@ -335,17 +333,8 @@ async function main(): Promise<void> {
   refresh()
 
   watchResize()
-  // 要等 applyWindowSize 套用完才開始記錄尺寸：框架建立視窗的初始尺寸會先觸發 resize，
-  // 那時若就寫回 portfolio，applyWindowSize 會反過來套用初始尺寸，偏好等於每次被蓋掉
-  let sizeSettled = false
-  window.addEventListener('resize', () => {
-    if (!sizeSettled) return
-    portfolio = { ...portfolio, windowWidth: window.innerWidth, windowHeight: window.innerHeight }
-    scheduleSave()
-  })
 
   await applyWindowSize()
-  sizeSettled = true
   symbols = await ensureFresh(new Date())
   await log('INFO', 'app.launch', `${window.innerWidth}×${window.innerHeight}`)
 

@@ -75,7 +75,7 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 | 檔案 | 職責 |
 |---|---|
 | `theme.css` | 深色 design token（CSS 變數）、紅漲綠跌色票 |
-| `scale.ts` | 監聽 DOM `resize`，更新縮放用的 CSS 變數；提供縮放下限 0.85 與最小視窗高度比例（ADR-0016） |
+| `scale.ts` | 監聽 DOM `resize`，更新縮放用的 CSS 變數；提供縮放下限 0.85 與視窗高度比例（ADR-0016） |
 | `TableView.ts` | 7 欄表格（報酬欄依顯示模式二選一）、欄頭排序、總計列、無成交列淡化、編輯模式的就地編輯與操作欄 |
 | `EditControls.ts` | 工具列模式切換鈕、新增表單、強制新增逃生門、表單錯誤訊息 |
 | `StatusBar.ts` | 更新時間、來源標籤、降級警示、非當日資料標記 |
@@ -119,7 +119,7 @@ export interface QuoteProvider {
 main.ts
   → storage.load()                    讀 config/portfolio.json
   → symbolTable.ensureFresh()         非當日則抓兩個官方端點
-  → ui 建立（套用排序、視窗尺寸與內容推得的最小尺寸、主題、縮放）
+  → ui 建立（套用排序、視窗尺寸貼合內容、主題、縮放）
   → QuoteService.start()
         若在交易時段 → 立即抓一次，之後每 5 秒
         若不在      → 抓一次即停，狀態列顯示「已收盤 / 非交易時段」
@@ -179,8 +179,6 @@ main.ts
   "sortKey": "marketValue",
   "sortDirection": "desc",
   "returnDisplay": "rate",
-  "windowWidth": 1100,
-  "windowHeight": 760,
   "holdings": [
     { "code": "2330", "name": "台積電", "market": "listing", "shares": 1000, "averageCost": 850.5 }
   ]
@@ -191,7 +189,7 @@ main.ts
 
 `returnDisplay` 是報酬欄的顯示模式（`rate` / `amount`，見 ADR-0015）。舊檔缺少此欄位或值不合法時視為 `rate`，屬向後相容，因此不升 `schemaVersion`。
 
-`windowWidth` / `windowHeight` 是**內容尺寸（CSS px）**，等於 `window.innerWidth` / `innerHeight`；還原時要換算成 `window.setSize` 收的外框尺寸，見 ADR-0013。
+視窗尺寸**不存放於此檔**：啟動時與內容變動時一律把視窗調到貼合內容（ADR-0016）。舊檔殘留的 `windowWidth` / `windowHeight` 直接忽略，不升 `schemaVersion`。
 
 ### 6.2 `config/symbols.json`
 
@@ -229,7 +227,7 @@ main.ts
 
 `useSavedState` 設為 `false`：視窗尺寸由 `portfolio.json` 自行管理，避免兩套來源打架。
 
-`minWidth` / `minHeight` 只在應用程式套用尺寸前有效：啟動後 `main.ts` 會以內容自然寬度推得的最小尺寸覆蓋（ADR-0016）。
+`minWidth` / `minHeight` 只在應用程式套用尺寸前有效：啟動後 `main.ts` 會把視窗調到貼合內容的尺寸（ADR-0016），這組值不再是實際的下限。
 
 **已知限制**：
 
@@ -335,12 +333,12 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0005](adr/ADR-0005.md) | TypeScript + Vite，不引入框架 |
 | [ADR-0006](adr/ADR-0006.md) | 縮放改用內容等比 |
 | [ADR-0007](adr/ADR-0007.md) | 固定深色主題，紅漲綠跌 |
-| [ADR-0008](adr/ADR-0008.md) | 視窗尺寸與輪詢時段 |
+| [ADR-0008](adr/ADR-0008.md) | 視窗尺寸與輪詢時段（尺寸持久化已由 ADR-0016 取代） |
 | [ADR-0009](adr/ADR-0009.md) | 報價傳輸以 `net.get` 為主，`curl.exe` 為備援 |
 | [ADR-0010](adr/ADR-0010.md) | Vite 產出放 `build/`，globals 由框架注入 |
-| [ADR-0011](adr/ADR-0011.md) | 縮放因子下限 0.85，低於下限由表格水平捲動消化 |
+| [ADR-0011](adr/ADR-0011.md) | 縮放因子下限 0.85，低於下限由表格水平捲動消化（後半已由 ADR-0016 取代） |
 | [ADR-0012](adr/ADR-0012.md) | 編輯介面採就地編輯與系統原生確認對話框 |
 | [ADR-0013](adr/ADR-0013.md) | `window.setSize` 收外框尺寸、`net.get` 的 `timeout` 不生效 |
 | [ADR-0014](adr/ADR-0014.md) | 非交易時段首抓失敗時延遲重試一次 |
 | [ADR-0015](adr/ADR-0015.md) | 報酬欄的顯示模式切換與投組今日報酬率 |
-| [ADR-0016](adr/ADR-0016.md) | 欄寬貼齊內容，最小視窗尺寸由內容自然寬度推得 |
+| [ADR-0016](adr/ADR-0016.md) | 欄寬貼齊內容，視窗尺寸由內容自然寬度推得 |

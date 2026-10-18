@@ -5,8 +5,6 @@ const VALID = {
   schemaVersion: 1,
   sortKey: 'marketValue',
   sortDirection: 'desc',
-  windowWidth: 1100,
-  windowHeight: 760,
   holdings: [{ code: '2330', name: '台積電', market: 'listing', shares: 1000, averageCost: 850.5 }],
 }
 
@@ -23,8 +21,11 @@ describe('parsePortfolio', () => {
     expect(file.holdings).toEqual(VALID.holdings)
     expect(file.sortKey).toBe('marketValue')
     expect(file.sortDirection).toBe('desc')
-    expect(file.windowWidth).toBe(1100)
-    expect(file.windowHeight).toBe(760)
+  })
+
+  it('忽略舊檔殘留的視窗寬高欄位（視窗尺寸不再持久化，ADR-0016）', () => {
+    const file = parsePortfolio(JSON.stringify({ ...VALID, windowWidth: 1100, windowHeight: 760 }))
+    expect(file.holdings).toEqual(VALID.holdings)
   })
 
   it('缺少 schemaVersion 時視為目前版本', () => {
@@ -38,13 +39,9 @@ describe('parsePortfolio', () => {
   })
 
   it('偏好不合法時回到預設值', () => {
-    const file = parsePortfolio(
-      JSON.stringify({ ...VALID, sortKey: '不存在的鍵', sortDirection: '橫向', windowWidth: -1, windowHeight: '大' }),
-    )
+    const file = parsePortfolio(JSON.stringify({ ...VALID, sortKey: '不存在的鍵', sortDirection: '橫向' }))
     expect(file.sortKey).toBe(DEFAULT_PREFERENCES.sortKey)
     expect(file.sortDirection).toBe('desc')
-    expect(file.windowWidth).toBe(DEFAULT_PREFERENCES.windowWidth)
-    expect(file.windowHeight).toBe(DEFAULT_PREFERENCES.windowHeight)
   })
 
   it('returnDisplay 缺失或非法時回預設，合法值原樣讀出', () => {
