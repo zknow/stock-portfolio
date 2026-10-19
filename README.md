@@ -36,13 +36,17 @@ npm install
 
 `bin/neutralino-win_x64.exe` 是 Neutralino 框架執行檔，已納入版控，clone 後不需額外取得。它的版本必須等於 `neutralino.config.json` 的 `cli.binaryVersion`。
 
+雙擊 `scripts\start.bat` 或 `scripts\release.bat` 時不必先手動跑：找不到 `node_modules\` 會自己執行 `npm install`，失敗才停下來顯示訊息。
+
 ### 啟動
 
 ```bash
 npx neu run
 ```
 
-或雙擊 `scripts\start.bat`；要開發者工具時執行 `scripts\start.bat inspector`。
+或雙擊 `scripts\start.bat`；要開發者工具時執行 `scripts\start.bat inspector`。用 `start.bat` 啟動時，關掉應用程式視窗（右上角 X）會連同主控台、`neu run` 與 Vite 一起結束。
+
+三支 `.bat` 以 ANSI（CP950 / Big5）儲存，不要改存成 UTF-8：cmd 以主控台代碼頁解碼批次檔，UTF-8 的中文會被錯讀。
 
 ### 包版（release）
 
@@ -56,7 +60,7 @@ npx neu build --release
 
 ### 清除殘留程序
 
-`npx neu run` 或測試結束後若行程沒被關掉（`neutralino-win_x64.exe`、Vite / esbuild / vitest 的 `node.exe`），雙擊 `scripts\kill.bat` 清除。
+`npx neu run` 或測試結束後若行程沒被關掉（`neutralino-win_x64.exe`、Vite / esbuild / vitest 的 `node.exe`），雙擊 `scripts\kill.bat` 清除；`scripts\start.bat` 啟動的 app 關閉時會自己跑這一步，不需手動。
 
 判準只有兩類：執行檔位於本專案目錄下（`bin\`、`dist\`、`node_modules\`），或 `node.exe` 的命令列指向本專案的 `node_modules` 工具鏈（vite / vitest / esbuild / @neutralinojs）。其他 `node.exe`、開著本專案的編輯器與 agent 都不受影響；被結束的行程連同其子行程（webview 等）一併關閉。
 
@@ -100,8 +104,8 @@ stock-portfolio/
 ├── resources/                 # 其他資源（Vite 的 publicDir，會複製到 build/）
 │   └── icons/appIcon.png
 ├── scripts/                   # 雙擊用的便利腳本
-│   ├── start.bat              # 啟動桌面應用程式（加 inspector 附開發者工具）
-│   ├── release.bat            # 打包 Windows 執行檔
+│   ├── start.bat              # 啟動桌面應用程式（缺 node_modules 先 npm install；關掉 app 後自動收尾）
+│   ├── release.bat            # 打包 Windows 執行檔（缺 node_modules 先 npm install）
 │   └── kill.bat               # 清除殘留的專案程序
 └── src/                       # 原始程式碼
     ├── domain/                # 模型與計算，零依賴

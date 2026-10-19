@@ -1,20 +1,20 @@
 @echo off
 setlocal
 
-rem æœ¬æ©Ÿæ˜¯ UTF-8 ç³»çµ±ï¼ˆACP 65001ï¼‰ï¼Œæœ¬æª”ä»¥ UTF-8 ç„¡ BOM å„²å­˜ï¼Œä¸è¦åŠ  chcp
-rem é›™æ“Šæ™‚çš„å·¥ä½œç›®éŒ„ä¸ä¸€å®šæ˜¯å°ˆæ¡ˆæ ¹ç›®éŒ„ï¼Œä¸€å¾‹åˆ‡åˆ°å°ˆæ¡ˆæ ¹ç›®éŒ„ï¼ˆé€™æ”¯è…³æœ¬åœ¨ scripts\ï¼‰
+rem ¥»ÀÉ¥H ANSI¡]CP950 / Big5¡^Àx¦s¡Acmd ¤~Åª±oÀ´¤¤¤å¡F¤£­n¦s¦¨ UTF-8¡B¤£­n¥[ chcp
+rem ÂùÀ»®Éªº¤u§@¥Ø¿ı¤£¤@©w¬O±M®×®Ú¥Ø¿ı¡A¤@«ß¤Á¨ì±M®×®Ú¥Ø¿ı¡]³o¤ä¸}¥»¦b scripts\¡^
 cd /d "%~dp0.."
 
-rem æ¸…é™¤æ®˜ç•™çš„å°ˆæ¡ˆç¨‹åºï¼Œåªèªé€™å…©é¡ï¼š
-rem   1. åŸ·è¡Œæª”ä½æ–¼æœ¬å°ˆæ¡ˆç›®éŒ„ä¸‹ï¼ˆbin\neutralino-win_x64.exeã€dist çš„ exeã€node_modules çš„ esbuild.exeï¼‰
-rem   2. node.exe ä¸”å‘½ä»¤åˆ—æŒ‡å‘æœ¬å°ˆæ¡ˆçš„ node_modules å·¥å…·éˆï¼ˆvite / vitest / esbuild / neuï¼‰
-rem ä¸æ¡ç”¨ã€Œå‘½ä»¤åˆ—å«å°ˆæ¡ˆè·¯å¾‘ã€çš„å¯¬é¬†æ¢ä»¶ï¼Œé‚£æœƒèª¤æ®ºé–‹è‘—æœ¬å°ˆæ¡ˆçš„ç·¨è¼¯å™¨èˆ‡ agent
+rem ²M°£´İ¯dªº±M®×µ{§Ç¡A¥u»{³o¨âÃş¡G
+rem   1. °õ¦æÀÉ¦ì©ó¥»±M®×¥Ø¿ı¤U¡]bin\neutralino-win_x64.exe¡Bdist ªº exe¡Bnode_modules ªº esbuild.exe¡^
+rem   2. node.exe ¥B©R¥O¦C«ü¦V¥»±M®×ªº node_modules ¤u¨ãÃì¡]vite / vitest / esbuild / neu¡^
+rem ¤£±Ä¥Î¡u©R¥O¦C§t±M®×¸ô®|¡vªº¼eÃP±ø¥ó¡A¨º·|»~±ş¶}µÛ¥»±M®×ªº½s¿è¾¹»P agent
 set "PROJ_DIR=%CD%\"
 
-echo æ­£åœ¨æ¸…é™¤æ®˜ç•™çš„å°ˆæ¡ˆç¨‹åº...
+echo ¥¿¦b²M°£´İ¯dªº±M®×µ{§Ç...
 echo.
 
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$d=$env:PROJ_DIR.ToLower(); $subs=@('node_modules\vite\','node_modules\vitest\','node_modules\esbuild\','node_modules\@esbuild\','node_modules\@neutralinojs\','node_modules\.bin\'); $all=@(Get-CimInstance Win32_Process); $self=$PID; $anc=@(); $p=($all | Where-Object { $_.ProcessId -eq $self }).ParentProcessId; while ($p) { $anc+=$p; $p=($all | Where-Object { $_.ProcessId -eq $p }).ParentProcessId }; $hit=@($all | Where-Object { $q=$_; $anc -notcontains $q.ProcessId -and $q.ProcessId -ne $self -and (($q.ExecutablePath -and $q.ExecutablePath.ToLower().StartsWith($d)) -or ($q.Name -eq 'node.exe' -and $q.CommandLine -and (@($subs | Where-Object { $q.CommandLine.ToLower().Contains($d+$_) }).Count -gt 0))) }); $ids=@($hit | ForEach-Object { $_.ProcessId }); do { $new=@($all | Where-Object { $ids -contains $_.ParentProcessId -and $ids -notcontains $_.ProcessId -and $anc -notcontains $_.ProcessId -and $_.ProcessId -ne $self } | ForEach-Object { $_.ProcessId }); $ids+=$new } while ($new.Count -gt 0); if ($ids.Count -eq 0) { Write-Host 'æ²’æœ‰ç™¼ç¾æ®˜ç•™çš„å°ˆæ¡ˆç¨‹åºã€‚' } else { foreach ($i in $ids) { $n=($all | Where-Object { $_.ProcessId -eq $i }).Name; Stop-Process -Id $i -Force -ErrorAction SilentlyContinue; Write-Host ('å·²çµæŸ  ' + $i.ToString().PadLeft(6) + '  ' + $n) } }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$d=$env:PROJ_DIR.ToLower(); $subs=@('node_modules\vite\','node_modules\vitest\','node_modules\esbuild\','node_modules\@esbuild\','node_modules\@neutralinojs\','node_modules\.bin\'); $all=@(Get-CimInstance Win32_Process); $self=$PID; $anc=@(); $p=($all | Where-Object { $_.ProcessId -eq $self }).ParentProcessId; while ($p) { $anc+=$p; $p=($all | Where-Object { $_.ProcessId -eq $p }).ParentProcessId }; $hit=@($all | Where-Object { $q=$_; $anc -notcontains $q.ProcessId -and $q.ProcessId -ne $self -and (($q.ExecutablePath -and $q.ExecutablePath.ToLower().StartsWith($d)) -or ($q.Name -eq 'node.exe' -and $q.CommandLine -and (@($subs | Where-Object { $q.CommandLine.ToLower().Contains($d+$_) }).Count -gt 0))) }); $ids=@($hit | ForEach-Object { $_.ProcessId }); do { $new=@($all | Where-Object { $ids -contains $_.ParentProcessId -and $ids -notcontains $_.ProcessId -and $anc -notcontains $_.ProcessId -and $_.ProcessId -ne $self } | ForEach-Object { $_.ProcessId }); $ids+=$new } while ($new.Count -gt 0); if ($ids.Count -eq 0) { Write-Host '¨S¦³µo²{´İ¯dªº±M®×µ{§Ç¡C' } else { foreach ($i in $ids) { $n=($all | Where-Object { $_.ProcessId -eq $i }).Name; Stop-Process -Id $i -Force -ErrorAction SilentlyContinue; Write-Host ('¤wµ²§ô  ' + $i.ToString().PadLeft(6) + '  ' + $n) } }"
 
 echo.
 pause

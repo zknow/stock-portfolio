@@ -256,6 +256,20 @@
 - [x] 實機驗收（2026-10-19 盤中，2 檔持股）：一級距 10%（視窗 453 → 497 → 584 → 672 實體 px，等於內容自然寬 437 × 倍率 + 外框）；80%（366×281）與 200%（890×643）都完整可見，7 欄、總計列、狀態列都沒有裁切，也沒有水平捲軸；原生縮放沒有接手（視窗寬與倍率成正比）
 - [x] 還原驗收：`Ctrl+0` 回 100%（453×341）、`Ctrl+滾輪` 每格一跳、上下限夾在 80%／200%；`portfolio.json` 寫入 `zoom: 1.5` 後重啟直接開在 672×492
 
+## 啟動腳本收尾與自動 install（2026-10-19）
+
+- [x] `scripts\start.bat` 改為背景啟動本地 CLI（`node node_modules\@neutralinojs\neu\bin\neu.js run`），等 app 出現再等它被關掉，關掉後跑 `kill.bat` 收掉 `neu run` 與 Vite；主控台跟著結束（原本 `npx neu run` 在 app 關閉後不會自己結束，Vite 續跑，整條鏈留在背景）
+- [x] 不經 `npx` 直接跑本地 CLI：少一層 `npx-cli.js` 行程，`kill.bat` 的兩類判準才涵蓋整條鏈（`npx` 那層的命令列不含專案路徑，殺不到，會把主控台釘住）
+- [x] app 最多等 60 秒；等不到就印錯誤、跑 `kill.bat`、`pause` 讓訊息留著（實測：把 `bin\neutralino-win_x64.exe` 改名後執行，73 秒後 exit 1，訊息與清理都正確）
+- [x] `scripts\start.bat` 與 `scripts\release.bat` 找不到 `node_modules\` 時自動 `npm install`（`call` 才回得來），失敗才印錯誤、`pause`、離開
+- [x] 三支 `.bat` 改以 ANSI（CP950 / Big5）+ CRLF 儲存，並移除檔內的 `chcp`：本機 `ACP`／`OEMCP` 都是 950，cmd 在開檔時就以當時的主控台代碼頁解碼整個批次檔，UTF-8 的中文會被逐字錯讀並吃掉後面的字元（實測 7 行被誤判成指令，`call`、重導向也失效）；`chcp` 在檔內執行來不及改寫已解碼的內容
+- [x] 同步 `README.md`（前置作業、啟動、清除殘留程序、結構樹）、`AGENTS.md`（`scripts/` 用途、建置與執行）
+- [x] 實測（2026-10-19）：`scripts\start.bat` 起 app（1 秒）→ 關右上角 X → 主控台 1 秒內結束，無殘留 `node.exe` / `cmd.exe` / `neutralino-win_x64.exe`
+- [x] 實測 `inspector` 參數：app 命令列確實帶 `--window-enable-inspector`，關窗後同樣收尾
+- [x] 實測自動 install：把 `node_modules` 改名後執行 `scripts\start.bat`，先印「找不到 node_modules，先執行 npm install...」→ 9 秒裝完 127 個套件 → 照常啟動；`package-lock.json` 未變動，測後還原原本的 `node_modules`
+- [x] 實測 `scripts\release.bat`：打包成功（exit 0），產物 `dist\stock-portfolio\stock-portfolio-win_x64.exe` 與 `resources.neu` 照常產生
+- [x] 實測 `scripts\kill.bat`：中文訊息正常、無誤判行，「沒有發現殘留的專案程序」與逐筆「已結束」都照常
+
 ## 未排入 v1
 
 CSV 匯入/匯出、i18n 多語、亮色主題與切換鈕、交易明細與已實現損益、股利與費稅、官方 EOD 校正層、券商 API、自動更新。

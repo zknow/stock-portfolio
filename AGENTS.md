@@ -18,7 +18,7 @@
 | `config/` | 執行期設定。`portfolio.json`（庫存與 UI 偏好）、`symbols.json`（對照表快取）。**不得在此放 Neutralino 設定** |
 | `logs/` | 只寫 `app.log` |
 | `resources/` | `icons/` 與字型檔。不放圖片素材 |
-| `scripts/` | 雙擊用的便利腳本：`start.bat`（啟動，`inspector` 參數附開發者工具）、`release.bat`（打包）、`kill.bat`（清除殘留的專案程序）。一律 `cd /d "%~dp0.."` 切到專案根目錄再執行 |
+| `scripts/` | 雙擊用的便利腳本：`start.bat`（啟動，`inspector` 參數附開發者工具；關掉 app 後收掉 `neu run` 與 Vite）、`release.bat`（打包）、`kill.bat`（清除殘留的專案程序）。一律 `cd /d "%~dp0.."` 切到專案根目錄再執行 |
 
 `neutralino.config.json` 必須在專案根目錄，Neutralino 不接受其他位置。
 
@@ -55,6 +55,8 @@ npm test                                       # vitest（src/domain、src/servi
 npx neu build --release                        # 打包 Windows 執行檔到 dist/
 ```
 
+- `scripts\start.bat` 與 `scripts\release.bat` 找不到 `node_modules\` 時會自己執行 `npm install`，不必先手動跑
+- `scripts\*.bat` 以 ANSI（CP950 / Big5）儲存，改動時用 PowerShell 的 950 編碼讀寫，不要存成 UTF-8：cmd 以主控台代碼頁解碼批次檔，UTF-8 的中文會被逐字錯讀並吃掉後面的字元，`chcp` 在檔內改不掉
 - `build/` 是 Vite 的產出，`dist/` 是 `neu build` 的產出，兩者不可共用（見 `docs/architecture.md` §7.2）
 - `bin/neutralino-win_x64.exe` 是框架執行檔，`neu run` 需要它，已納入版控；版本必須等於 `neutralino.config.json` 的 `cli.binaryVersion`
 - dev 模式下 `window` 的 `resize` 事件用 DOM 監聽即可，**不要**找 `windowResize` 事件，它不存在

@@ -1,27 +1,58 @@
 @echo off
 setlocal
 
-rem æœ¬æ©Ÿæ˜¯ UTF-8 ç³»çµ±ï¼ˆACP 65001ï¼‰ï¼Œæœ¬æª”ä»¥ UTF-8 ç„¡ BOM å„²å­˜ï¼Œä¸è¦åŠ  chcp
-rem é›™æ“Šæ™‚çš„å·¥ä½œç›®éŒ„ä¸ä¸€å®šæ˜¯å°ˆæ¡ˆæ ¹ç›®éŒ„ï¼Œä¸€å¾‹åˆ‡åˆ°å°ˆæ¡ˆæ ¹ç›®éŒ„ï¼ˆé€™æ”¯è…³æœ¬åœ¨ scripts\ï¼‰
+rem ¥»ÀÉ¥H ANSI¡]CP950 / Big5¡^Àx¦s¡Acmd ¤~Åª±oÀ´¤¤¤å¡F¤£­n¦s¦¨ UTF-8¡B¤£­n¥[ chcp
+rem ÂùÀ»®Éªº¤u§@¥Ø¿ı¤£¤@©w¬O±M®×®Ú¥Ø¿ı¡A¤@«ß¤Á¨ì±M®×®Ú¥Ø¿ı¡]³o¤ä¸}¥»¦b scripts\¡^
 cd /d "%~dp0.."
 
 if not exist "node_modules\" (
-  echo [éŒ¯èª¤] æ‰¾ä¸åˆ° node_modulesï¼Œè«‹å…ˆåŸ·è¡Œï¼šnpm install
-  pause
-  exit /b 1
+  echo §ä¤£¨ì node_modules¡A¥ı°õ¦æ npm install...
+  echo.
+  call npm install
+  if errorlevel 1 (
+    echo.
+    echo [¿ù»~] npm install ¥¢±Ñ¡A½Ğ½T»{ Node.js »Pºô¸ô¡C
+    pause
+    exit /b 1
+  )
+  echo.
 )
 
 if /i "%~1"=="inspector" (
-  echo å•Ÿå‹•æ¡Œé¢æ‡‰ç”¨ç¨‹å¼ï¼ˆé™„é–‹ç™¼è€…å·¥å…·ï¼‰...
-  echo.
-  npx neu run -- --window-enable-inspector
+  set "NEU_ARGS=run -- --window-enable-inspector"
+  echo ±Ò°Ê®à­±À³¥Îµ{¦¡¡]ªş¶}µoªÌ¤u¨ã¡^...
 ) else (
-  echo å•Ÿå‹•æ¡Œé¢æ‡‰ç”¨ç¨‹å¼...
-  echo æç¤ºï¼šåŠ åƒæ•¸ inspector å¯é–‹å•Ÿé–‹ç™¼è€…å·¥å…·ï¼Œä¾‹å¦‚ scripts\start.bat inspector
-  echo.
-  npx neu run
+  set "NEU_ARGS=run"
+  echo ±Ò°Ê®à­±À³¥Îµ{¦¡...
+  echo ´£¥Ü¡G¥[°Ñ¼Æ inspector ¥i¶}±Ò¶}µoªÌ¤u¨ã¡A¨Ò¦p scripts\start.bat inspector
 )
+echo.
+
+rem neu run ¦b app Ãö³¬«á¤£·|¦Û¤vµ²§ô¡]Vite Äò¶]¡^¡A©Ò¥H­I´º±Ò°Ê¡A³o¸Ìµ¥ app Ãö±¼¦A¦¬§À¡C
+rem ª½±µ¶]¥»¦a CLI ¦Ó¤£¸g npx¡G¤Ö¤@¼h¦æµ{¡Akill.bat ªº§P·Ç¤~²[»\¾ã±øÃì¡C
+start "" /b node "node_modules\@neutralinojs\neu\bin\neu.js" %NEU_ARGS%
+
+rem µ¥ app ¥X²{¡]³Ì¦h 60 ¬í¡A¨C½ü tasklist ¶¡¹j¬ù 1 ¬í¡^¡A¥X²{«á¦Aµ¥¥¦³QÃö±¼
+set /a TICKS=0
+:wait_launch
+ping -n 2 127.0.0.1 >nul
+tasklist /fi "imagename eq neutralino-win_x64.exe" 2>nul | find /i "neutralino-win_x64.exe" >nul
+if not errorlevel 1 goto wait_close
+set /a TICKS+=1
+if %TICKS% lss 60 goto wait_launch
 
 echo.
-echo æ‡‰ç”¨ç¨‹å¼å·²çµæŸã€‚
+echo [¿ù»~] À³¥Îµ{¦¡¨S¦³±Ò°Ê¡]©Î±Ò°Ê«á¥ß§Yµ²§ô¡^¡A½Ğ¬İ¤W¤è°T®§¡C
+call "%~dp0kill.bat" <nul >nul
 pause
+exit /b 1
+
+:wait_close
+ping -n 2 127.0.0.1 >nul
+tasklist /fi "imagename eq neutralino-win_x64.exe" 2>nul | find /i "neutralino-win_x64.exe" >nul
+if not errorlevel 1 goto wait_close
+
+echo.
+echo À³¥Îµ{¦¡¤wµ²§ô¡A¦¬±¼ neu run »P Vite...
+call "%~dp0kill.bat" <nul >nul
+exit /b 0

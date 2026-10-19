@@ -1,28 +1,35 @@
 @echo off
 setlocal
 
-rem æœ¬æ©Ÿæ˜¯ UTF-8 ç³»çµ±ï¼ˆACP 65001ï¼‰ï¼Œæœ¬æª”ä»¥ UTF-8 ç„¡ BOM å„²å­˜ï¼Œä¸è¦åŠ  chcp
-rem é›™æ“Šæ™‚çš„å·¥ä½œç›®éŒ„ä¸ä¸€å®šæ˜¯å°ˆæ¡ˆæ ¹ç›®éŒ„ï¼Œä¸€å¾‹åˆ‡åˆ°å°ˆæ¡ˆæ ¹ç›®éŒ„ï¼ˆé€™æ”¯è…³æœ¬åœ¨ scripts\ï¼‰
+rem ¥»ÀÉ¥H ANSI¡]CP950 / Big5¡^Àx¦s¡Acmd ¤~Åª±oÀ´¤¤¤å¡F¤£­n¦s¦¨ UTF-8¡B¤£­n¥[ chcp
+rem ÂùÀ»®Éªº¤u§@¥Ø¿ı¤£¤@©w¬O±M®×®Ú¥Ø¿ı¡A¤@«ß¤Á¨ì±M®×®Ú¥Ø¿ı¡]³o¤ä¸}¥»¦b scripts\¡^
 cd /d "%~dp0.."
 
 if not exist "node_modules\" (
-  echo [éŒ¯èª¤] æ‰¾ä¸åˆ° node_modulesï¼Œè«‹å…ˆåŸ·è¡Œï¼šnpm install
-  pause
-  exit /b 1
+  echo §ä¤£¨ì node_modules¡A¥ı°õ¦æ npm install...
+  echo.
+  call npm install
+  if errorlevel 1 (
+    echo.
+    echo [¿ù»~] npm install ¥¢±Ñ¡A½Ğ½T»{ Node.js »Pºô¸ô¡C
+    pause
+    exit /b 1
+  )
+  echo.
 )
 
-echo æ‰“åŒ… Windows åŸ·è¡Œæª”ï¼ˆreleaseï¼‰...
+echo ¥´¥] Windows °õ¦æÀÉ¡]release¡^...
 echo.
 call npx neu build --release
 if errorlevel 1 (
   echo.
-  echo [éŒ¯èª¤] æ‰“åŒ…å¤±æ•—ï¼Œè«‹çœ‹ä¸Šæ–¹è¨Šæ¯ã€‚
+  echo [¿ù»~] ¥´¥]¥¢±Ñ¡A½Ğ¬İ¤W¤è°T®§¡C
   pause
   exit /b 1
 )
 
 echo.
-echo æ‰“åŒ…å®Œæˆï¼Œç”¢ç‰©åœ¨ï¼š
+echo ¥´¥]§¹¦¨¡A²£ª«¦b¡G
 echo   dist\stock-portfolio\stock-portfolio-win_x64.exe
 echo   dist\stock-portfolio\resources.neu
 echo   dist\stock-portfolio-release.zip
