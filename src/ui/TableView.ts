@@ -353,12 +353,9 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
   const table = document.createElement('table')
   table.append(head, body)
 
-  const empty = document.createElement('p')
-  empty.className = 'empty'
-
   const board = document.createElement('div')
   board.className = 'board'
-  board.append(table, empty)
+  board.append(table)
   host.append(board)
 
   const totals = document.createElement('footer')
@@ -375,15 +372,23 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
     if (snapshot.start !== null && snapshot.end !== null) target.setSelectionRange(snapshot.start, snapshot.end)
   }
 
-  function renderEmpty(mode: EditMode): void {
-    empty.replaceChildren(span('尚未新增任何持股', 'empty-title'))
+  /** 空狀態：訊息放在表格內的一列，欄頭照常顯示，視窗寬度才與只有一列資料時一致（F1、F11） */
+  function emptyRow(mode: EditMode, display: ReturnDisplay): HTMLTableRowElement {
+    const row = document.createElement('tr')
+    const element = cell('', 'empty')
+    element.colSpan = columnsFor(display).length + 1
+
+    element.append(span('尚未新增任何持股', 'empty-title'))
     if (mode === 'edit') {
       const add = button('新增股票', 'primary')
       add.addEventListener('click', () => handlers.requestAdd())
-      empty.append(add)
+      element.append(add)
     } else {
-      empty.append(span('切換到編輯模式即可新增', 'empty-hint'))
+      element.append(span('切換到編輯模式即可新增', 'empty-hint'))
     }
+
+    row.append(element)
+    return row
   }
 
   return {
@@ -401,12 +406,10 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
       }
       actionsHead.hidden = edit.mode !== 'edit'
 
-      body.replaceChildren(...rows.map((row) => rowFor(row, edit, handlers, display)))
-
       const isEmpty = rows.length === 0
-      table.hidden = isEmpty
-      empty.hidden = !isEmpty
-      if (isEmpty) renderEmpty(edit.mode)
+      body.replaceChildren(
+        ...(isEmpty ? [emptyRow(edit.mode, display)] : rows.map((row) => rowFor(row, edit, handlers, display))),
+      )
 
       const notes = document.createElement('div')
       notes.className = 'notes'
