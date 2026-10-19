@@ -192,7 +192,7 @@
 ### P5 發現的坑
 
 - **打包後的 exe 以「行程工作目錄」解析相對路徑，不是 exe 所在目錄。** `config/` 與 `logs/` 都走相對路徑，因此從別的目錄啟動 exe（例：`Start-Process` 未指定 `-WorkingDirectory`）時，資料會落在該目錄而非 `dist/stock-portfolio/`。雙擊執行時兩者相同，故不影響一般使用。若要固定，需以 `os.getPath` 取得 exe 目錄再組絕對路徑，屬新的技術決策
-- `NE_RS_UNBLDRE: Unable to load application resource file /build/favicon.ico`：webview 會自動請求 `/favicon.ico`，`resources/` 內沒有此檔。只出現在框架的 `neutralinojs.log`，不影響運作
+- `NE_RS_UNBLDRE: Unable to load application resource file /build/favicon.ico`：`documentRoot` 是 `/build/`，webview 自動要 `/build/favicon.ico`；已補 `resources/favicon.ico`（Vite 複製成 `build/favicon.ico`），訊息不再出現
 - `dist/stock-portfolio/neutralinojs.log` 是框架自己寫的，與 `logs/app.log` 無關，兩者不要混淆
 
 ## 報酬欄顯示模式切換（2026-10-18）
@@ -269,6 +269,13 @@
 - [x] 實測自動 install：把 `node_modules` 改名後執行 `scripts\start.bat`，先印「找不到 node_modules，先執行 npm install...」→ 9 秒裝完 127 個套件 → 照常啟動；`package-lock.json` 未變動，測後還原原本的 `node_modules`
 - [x] 實測 `scripts\release.bat`：打包成功（exit 0），產物 `dist\stock-portfolio\stock-portfolio-win_x64.exe` 與 `resources.neu` 照常產生
 - [x] 實測 `scripts\kill.bat`：中文訊息正常、無誤判行，「沒有發現殘留的專案程序」與逐筆「已結束」都照常
+
+## 打包後缺 favicon（2026-10-19）
+
+- [x] 新增 `resources\favicon.ico`：16 / 32 / 48 px 三張 PNG 的 ICO，由 `resources\icons\appIcon.png`（512×512）縮製
+- [x] Vite 的 `publicDir` 是 `resources`，打包時會複製成 `build\favicon.ico`，剛好對上 webview 要的 `/build/favicon.ico`；開發模式走 Vite，不經框架的資源載入，不受影響
+- [x] 同步 `README.md`（結構樹）、`AGENTS.md`（`resources/` 用途）
+- [x] 驗證：`npx neu build --release` 後 bundle 內含 `favicon.ico`；執行 `dist\stock-portfolio\stock-portfolio-win_x64.exe`（工作目錄設在 `dist\stock-portfolio`）開窗正常（412×285）並正常關閉，`neutralinojs.log` 沒有新增任何 `NE_RS_UNBLDRE`（改動前每啟動一次就新增一行）
 
 ## 未排入 v1
 

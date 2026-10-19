@@ -102,6 +102,7 @@ stock-portfolio/
 ├── logs/                      # 日誌檔
 │   └── app.log
 ├── resources/                 # 其他資源（Vite 的 publicDir，會複製到 build/）
+│   ├── favicon.ico            # webview 會自動要 /build/favicon.ico
 │   └── icons/appIcon.png
 ├── scripts/                   # 雙擊用的便利腳本
 │   ├── start.bat              # 啟動桌面應用程式（缺 node_modules 先 npm install；關掉 app 後自動收尾）
