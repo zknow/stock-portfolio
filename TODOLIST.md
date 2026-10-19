@@ -1,6 +1,6 @@
 # TODOLIST
 
-實作順序。完成一項就把 `[ ]` 改成 `[x]`。P0 已完成，P1 之後待呼叫接續。
+實作順序。完成一項就把 `[ ]` 改成 `[x]`。
 
 規格依據：`docs/requirements.md`。決策依據：`docs/adr/`。
 
@@ -83,8 +83,8 @@
 - [x] `logs/app.log` 寫入成功，中文編碼正確
 - [x] `portfolio.json` 不存在時回預設值，`error` 為 null，未誤建檔案
 - [x] 12 個檔案、84 個測試通過，`tsc --noEmit` 通過
-- [ ] Yahoo 實機查詢回 HTTP 429（探勘階段請求過多被限流），留待 P5
-- [ ] `net.get` 路徑實機查詢：本機有 proxy 走不到，留待 P5
+- [x] Yahoo 實機查詢（2026-10-19 10:30）：走 proxy 回 HTTP 429（上游限流），非專案缺陷；備援只在 MIS 連續失敗時才接手
+- [x] 傳輸路徑（2026-10-19 10:30）：本機無直連（`--noproxy` 直連 MIS 15 秒逾時），有 proxy 一律走 curl，MIS 回 200。`net.get` 的管線在 P1/P3 已對本機 Vite 驗過 200，外網這條在本機網路不可能成立
 
 ### P3 發現的坑（已寫入 docs）
 
@@ -97,12 +97,12 @@
 - [x] 載入 `frontend-design` 與 `ui-ux-pro-max` skills 決定深色 palette
 - [x] `src/ui/theme.css` — 深色 design token（CSS 變數），紅漲綠跌色票
 - [x] `src/ui/scale.ts` — DOM `resize` 監聽，依寬度對基準寬 1100 等比縮放
-- [x] `src/ui/TableView.ts` — 9 欄表格、欄頭排序、總計列、無成交列淡化
+- [x] `src/ui/TableView.ts` — 7 欄表格（報酬欄依顯示模式二選一）、欄頭排序、總計列、無成交列淡化
 - [x] `src/ui/StatusBar.ts` — 更新時間、來源標籤、降級警示色、非當日資料標記
 - [x] `src/main.ts` — 組裝啟動流程（§5.1）、偏好持久化、`windowClose` 收尾與關閉記錄
 - [x] `src/services/clock.ts` 補 `isAfterClose`，區分狀態列的「已收盤」與「非交易時段」
 
-### P4b 編輯畫面（已完成，待實機驗收）
+### P4b 編輯畫面（已完成）
 
 - [x] `src/ui/EditControls.ts` — 模式切換鈕、新增表單、強制新增逃生門、表單驗證與錯誤訊息
 - [x] `src/ui/TableView.ts` — 就地編輯（點格子變輸入框）、操作欄（刪除 / 儲存 / 取消）、輪詢重繪時還原焦點與游標
@@ -115,7 +115,7 @@
 
 #### P4b 驗收（實機，2026-10-17）
 
-- [x] 檢視模式：無「操作」欄、無輸入框、無新增鈕，表格與 P4a 相同（9 欄）
+- [x] 檢視模式：無「操作」欄、無輸入框、無新增鈕，表格欄位與 P4a 相同
 - [x] 切「編輯」：出現操作欄與新增鈕；切回「完成」時進行中的草稿被放棄（草稿 0 被丟棄、股數回到 1,500）
 - [x] 就地編輯：點股數格變輸入框，改值後 Enter 儲存 → `portfolio.json` 更新（1000 → 1500）；Esc 取消 → 值還原
 - [x] 驗證失敗（股數 0、平均成本 0）→ 該列顯示「股數必須為正整數」／「平均成本必須為正數」、輸入內容保留、檔案未變動
@@ -132,23 +132,21 @@
 
 - [x] **刪除的二次確認對話框從來沒出現過。** `@neutralinojs/lib` 的 `MessageBoxChoice` / `Icon` 只有 `.d.ts` 的 `declare enum`，`dist/*.js` 完全沒有對應值，執行期是 `undefined` → `MessageBoxChoice.YES_NO` 丟 `TypeError`，又被 `void removeHolding(code)` 吞掉，沒有任何痕跡。改為傳字面值（`'YES_NO' as MessageBoxChoice`）並把型別改成 `import type`。單元測試碰不到原生呼叫，只有實機能抓到
 - [ ] 就地編輯的輸入框沒有自動聚焦：點格子產生輸入框後 `:focus` 不在輸入框，要再點一次才能打字（`TableView.ts` 的 `editableCell` 未呼叫 `focus()`）。驗收時因此一度誤判成「環境問題」而非程式缺陷
-- [ ] `portfolio.json` 帶 UTF-8 BOM 時讀取失敗（`ERROR portfolio.corrupt Unexpected token ''`），會退回預設 1100×760 並停用編輯。app 自己寫的檔案沒有 BOM，但用記事本／部分編輯器存檔會加上去。要不要容錯屬新的技術決策
+- [ ] `portfolio.json` 帶 UTF-8 BOM 時讀取失敗（`ERROR portfolio.corrupt Unexpected token ''`），退回空投組的預設值並停用編輯（2026-10-19 再確認）。app 自己寫的檔案沒有 BOM，但用記事本／部分編輯器存檔會加上去。要不要容錯屬新的技術決策
 - [x] 附帶確認：MIS 回應缺少 9999 時只記 `WARN quote.missing MIS 未回傳報價：9999`，狀態列仍為 `MIS 即時`，log 無任何降級事件
 
 ### P4a 驗收（實測 2026-10-16）
 
 - [x] 5 檔持股（含 MIS 查無資料的假代號 9999）於 1100×760：9 欄齊備、現價帶 `▲` / `▼`、無成交列淡化、總計列與「已排除 1 檔：缺估值價」註記正確
 - [x] 點欄頭：`現價` 首次點擊為遞減（`現價 ▾`），`代號` 首次為遞增（`代號 ▴`）；9999 缺值在遞減下仍排最後
-- [x] 偏好持久化：點欄頭後寫入 `sortKey` / `sortDirection`；視窗改到 700×480 後寫入 `windowWidth: 684`、`windowHeight: 441` → 視窗寬高已於 ADR-0016 改為不持久化（排序與顯示模式仍保存）
-- [x] 重啟還原：`setSize` 回套內容尺寸 684×441（外框 700×480），來回不遞減 → **此結論錯誤**：`setSize` 收的是外框尺寸（實體 px），當時只在最小尺寸驗證，最小尺寸的夾制把縮小蓋掉了。見 ADR-0013
-- [x] 空持股：空狀態、總計列全 `NT$0`、`總報酬率 —`、狀態列只顯示「已收盤」且不發請求
-- [x] 最小視窗 700×480：9 欄仍在單一畫面內，無水平捲動 → **此結論已被 ADR-0011 取代**（見下方「P4a 後續修正」）
+- [x] 偏好持久化：點欄頭寫入 `sortKey` / `sortDirection`，顯示模式寫入 `returnDisplay`；視窗寬高不保存（ADR-0016）
+- [x] 空持股：總計列全 `NT$0`、`總報酬率 —`、不發請求
 - [x] 對比（相對 `--bg`）：`--text` 15.6:1、`--text-dim` 7.2:1、`--text-faint` 4.6:1、`--up` 5.5:1、`--down` 8.0:1，皆 ≥ 4.5:1
 - [x] 12 個測試檔案、89 個測試通過，`tsc --noEmit` 通過
 
 ### P4a 後續修正（2026-10-16，commit「fix scale」與其補完）
 
-- [x] 縮放加上下限：`MIN_SCALE = 0.85`（對應視窗寬 935），低於下限改由表格水平捲動消化 → `docs/adr/ADR-0011.md` → 下限仍為 0.85，但「低於下限由表格水平捲動消化」與 700×480 的固定下界已被 ADR-0016 取代
+- [x] 縮放下限 `MIN_SCALE = 0.85`（對應視窗寬 935）；視窗尺寸由內容推得，沒有固定下界 → `docs/adr/ADR-0011.md`、ADR-0016
 - [x] 補上 `docs/adr/ADR-0011.md`（前一版只在 `scale.ts` 註解引用，文件未落地）
 - [x] 同步 `requirements.md` F11、`glossary.md`、`architecture.md` 的 ADR 索引、`README.md` 的 ADR 篇數
 - [x] 修正 `TableView.test.ts` 的 `defaultDirection('marketValue')` 失敗：數字欄的判定改由單一 `NUMERIC_KEYS` 集合提供，`marketValue` 不再因未顯示而落到文字欄
@@ -158,11 +156,8 @@
 
 - **`ui-ux-pro-max` 的配色資料庫沒有一個能用的金融深色樣本。** 唯一的 `Financial Dashboard` 是 Tailwind slate + `#22C55E`，正是 `frontend-design` 點名的「近黑底 + 單一亮綠」樣板，而且「綠＝漲」與台股慣例相反。依 skill 規則改為自定色票，推導寫在 `theme.css` 檔頭
 - **紅漲綠跌反過來約束了整個介面的狀態色**：警示不能用紅或橙紅（會被讀成「漲」），改用琥珀 `--warn`；互動焦點改用鋼藍 `--accent`。紅綠在介面上只代表漲跌
-- `window.setSize` 的 `width` / `height` 是**內容尺寸**，不含標題列與外框。存 `window.innerWidth`、還原用 `setSize`，兩者同一基準才不會逐次縮小 → **此結論錯誤**：`setSize` 收的是外框尺寸（實體 px）。已於「啟動抓價與視窗尺寸修正」改為換算後再呼叫，見 ADR-0013
-- F11 的等比縮放原本沒有下限：視窗收到最小 700 寬時，13px 的表格字級會縮到約 8.3px。已於「P4a 後續修正」加上下限 0.85（ADR-0011）
-- `PnlTotals` 只有 `todayReturn`，沒有今日報酬率欄位；總計列因此只顯示 F12 列的「今日總報酬」金額 → 已於「報酬欄顯示模式切換」補上 `todayReturnRate`（ADR-0015）
+- `window.setSize` 的 `width` / `height` 與 `minWidth` / `minHeight` 都是**外框尺寸**（實體 px），`applyWindowSize` 先扣掉外框與 `devicePixelRatio` 再換算（ADR-0013）
 - `src/ui/*.test.ts` 於 P4a 後續修正補上（`scale.test.ts`、`TableView.test.ts`、`EditControls.test.ts`），`README.md` 與 `AGENTS.md` 的測試範圍已同步納入 `src/ui` 的純函式
-- `resources/icons/appIcon.png` 的 P1 幾何 placeholder（紅漲綠跌三柱）已於 P5 前換成正式圖示，見 P5 段
 
 ### 啟動抓價與視窗尺寸修正（2026-10-16，驗收 P4b 時發現）
 
@@ -172,17 +167,24 @@
 - [x] 非交易時段首抓沒取得報價時延遲 5 秒重試一次（`STARTUP_RETRY_MS`）→ `docs/adr/ADR-0014.md`，同步 `requirements.md` F5 / F16、`architecture.md` §5.1 與 §8
 - [x] 抽出 `domain/quote.ts` 的 `codesWithoutQuote()` 供 `MisProvider`（記 WARN）與 `QuoteService`（判斷是否重試）共用，並補單元測試
 - [x] 量測 `window.setSize`：`width` / `height` 與 `minWidth` / `minHeight` 是外框尺寸（實體 px）→ `applyWindowSize` 換算後再呼叫
-- [x] 修正後實測：內容 724×480 連續兩次啟動都還原成 724×480（修正前是 724 → 566 → 546 卡在最小）→ 視窗尺寸已於 ADR-0016 改為每次啟動貼合內容，不再還原
+- [x] 實測：內容 724×480 連續兩次啟動都得到 724×480（`setSize` 換算正確）
 - [x] 修掉 `resize` 監聽的競態：框架建立視窗的初始尺寸會先觸發 `resize`，那時寫回 `portfolio` 會讓 `applyWindowSize` 反過來套用初始尺寸（實測 724×480 被 866×571 蓋掉）。改成首次套用完成後才開始記錄
 - [x] `docs/adr/ADR-0013.md`，同步 `architecture.md`（§6.1、§7.1、§7.4、ADR 索引）、`requirements.md` F11 / F14 / F16、`README.md` ADR 篇數
 - [x] `tsc --noEmit` 與 109 個測試通過
-- [ ] 追蹤：若再出現「啟動沒抓到現價」，先看 `logs/app.log` 是 `quote.fail`（逾時或連線失敗）、`quote.missing`（查無資料）還是 `quote.retry`（已重試一次仍失敗）
+- 排查指引：再出現「啟動沒抓到現價」時，看 `logs/app.log` 是 `quote.fail`（逾時或連線失敗）、`quote.missing`（查無資料）還是 `quote.retry`（已重試一次仍失敗）
 
 ## P5 打包與驗收
 
 - [x] `neu build` 產 Windows 執行檔
-- [ ] 端到端驗收：盤中即時更新、盤外停止、降級與回試、重啟後偏好還原、縮放、深色
-      > 盤外已驗：打包後的 exe 可啟動、輪詢啟動後停止、`symbols.json` 當日快取命中不重抓。盤中即時更新與降級回試需交易時段
+- [x] 端到端驗收 —— 盤中即時更新（2026-10-19 10:31，狀態列「更新於」隨 5 秒輪詢前進，現價帶 `▼`、報酬欄與總計列同步）
+- [x] 端到端驗收 —— 深色主題與 7 欄（同一批截圖）
+- [x] 端到端驗收 —— 重啟後偏好還原（`returnDisplay: amount` + `sortKey: totalReturn` / `asc` → 欄頭「總報酬金額 ▴」、逐列金額無 `NT$`）
+- [x] 端到端驗收 —— 縮放（視窗拉到 1400 寬，字級與間距等比放大、欄寬拉寬填滿、右緣貼齊；ADR-0017）
+- [x] 端到端驗收 —— 降級（proxy 指到死路 `127.0.0.1:1`，連續 3 次 `quote.fail mis` 後 `quote.degrade`，狀態列改標 Yahoo 警示色）
+- [x] 端到端驗收 —— 回試（降級後 5 分 3 秒自動再試一次 MIS，失敗後回到 Yahoo）
+- [ ] 端到端驗收待補 —— 盤外停止（需 13:30 後時段）、回試成功恢復主來源（需 MIS 中斷後恢復，記 `quote.recover`）
+      > 盤外已驗（早前）：打包後的 exe 可啟動、輪詢啟動後停止、`symbols.json` 當日快取命中不重抓
+- [ ] F15 缺口（降級實測發現）：從未成功抓過報價時（`fetchedAt` 為 null）狀態列整條空白，看不到「降級中」。`StatusBar` 的來源標籤綁在 `fetchedAt !== null` 上，要不要改屬規格問題
 - [x] 首次執行 `npx neu build --release`，核對 `dist/` 實際產物與 README 記載一致
       > `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe`（2,459,136 bytes）+ `resources.neu`（53,428 bytes）；`dist/stock-portfolio-release.zip`（1,180,903 bytes）。與 README 記載相符
 - [x] 換上正式 `resources/icons/appIcon.png`：深色圓角磚 ＋ 鋼藍 `$`，512×512。配色全部取自 `theme.css`（`--surface-raised` 底磚、`--line-strong` 邊框、`--accent` 字）。`neutralino.config.json` 的圖示路徑不變
@@ -227,6 +229,20 @@
 - [x] 捲軸改為半透明：`--scroll-thumb: rgba(255,255,255,0.28)`、`--scroll-track: transparent`，用 `scrollbar-color` 套在 `html`（`theme.css`、`docs/requirements.md` F11）。實測滑塊落在底色上的合成色 rgb(80,85,87) 與計算值一致（證明 alpha 生效、不是被當成不透明色）、軌道外區域是底色 rgb(13,20,22)（原本是不透明的 rgb(44,44,44) 色帶）；捲軸寬度與貼合尺寸皆不變
 - [x] 移除水平捲動機制（最後防線）：`.board` 由 `overflow: auto` 改為 `overflow-y: auto` + `overflow-x: hidden`；`.totals` 由 `overflow-x: auto` 改為 `overflow: hidden`（`theme.css`、`docs/requirements.md` F11）
 - [x] 實機驗收（12 檔與 1 檔各一輪）：欄位像素座標、貼合尺寸與捲軸寬度與改動前逐項相同（12 檔 481×331、1 檔 421×290），垂直捲軸正常、畫面沒有水平捲軸
+
+## 空狀態貼合欄頭（2026-10-19）
+
+- [x] 空狀態不再隱藏表格：訊息改為表格內的一列（`colspan` = 欄數），欄頭照常顯示，視窗尺寸與只有一筆持股時走同一套量測（`TableView.ts`、`theme.css`、`docs/requirements.md` F1、`docs/architecture.md` §3.3）
+- [x] 空狀態列不套用列 hover 高亮（那列沒有可操作的元素）
+- [x] 實機驗收（2026-10-19 盤中）：空狀態 385×266、一筆持股（2330 台積電 1,000 股、均價 100）437×302；修正前空狀態為 212×146。剩下的 52 px 差距來自數值比欄頭寬的欄（現價 `▼2,420.00` 比「現價」寬）
+- [x] `tsc --noEmit` 與 116 個測試通過
+
+## 便利腳本收進 scripts/（2026-10-19）
+
+- [x] `start.bat`、`release.bat`、`kill.bat` 由根目錄移到 `scripts/`（`git mv`），根目錄只留設定檔與文件
+- [x] 三支腳本改用 `cd /d "%~dp0.."` 切到專案根目錄；`kill.bat` 的 `PROJ_DIR` 改由 `%CD%\` 取得
+- [x] 同步 `README.md`（結構樹、啟動／包版／清除殘留程序的路徑）、`AGENTS.md`（目錄用途表）
+- [x] 實測：`scripts\start.bat` 起得了 app 且資料寫進根目錄的 `logs\app.log`（工作目錄正確）、`scripts\release.bat` 打包成功（exit 0，產物在 `dist\`）、`scripts\kill.bat` 收得掉（連 `cmd.exe` 包裝行程一起）
 
 ## 未排入 v1
 
