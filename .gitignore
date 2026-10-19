@@ -4,7 +4,6 @@ node_modules/
 # 建置產物
 build/
 dist/
-bin/
 
 # Neutralino 執行期
 .storage/

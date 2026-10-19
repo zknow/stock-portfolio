@@ -25,7 +25,7 @@
 
 ## P1 專案骨架
 
-- [x] `git init` + `.gitignore`（排除 `node_modules/`、`bin/`、`build/`、`dist/`、`.tmp/`、`logs/`、`config/portfolio.json`、`config/symbols.json`）
+- [x] `git init` + `.gitignore`（排除 `node_modules/`、`build/`、`dist/`、`.tmp/`、`logs/`、`config/portfolio.json`、`config/symbols.json`）
 - [x] 取 `neutralinojs/neutralinojs-zero` 骨架 + 手動接 Vite + TypeScript
       > `neu create` 走不通（CLI 的 HTTP 客戶端不支援 proxy），改為手動下載模板 zip
 - [x] `neutralino.config.json`：`applicationId`、`modes.window`、`dataLocation: "app"`、`nativeAllowList`

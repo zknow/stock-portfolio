@@ -28,33 +28,29 @@
 
 ## 執行
 
+### 前置作業
+
 ```bash
 npm install
-npm run dev               # Vite 開發伺服器（通常不單獨跑）
-npx neu run               # 啟動桌面應用程式，會自動帶起 Vite 與 HMR
-npx neu run -- --window-enable-inspector   # 同上，並開啟開發者工具
 ```
 
-`npm run dev` 單獨執行只會起網頁，沒有 Neutralino 原生 API。要看應用程式一律用 `npx neu run`。
+`bin/neutralino-win_x64.exe` 是 Neutralino 框架執行檔，已納入版控，clone 後不需額外取得。它的版本必須等於 `neutralino.config.json` 的 `cli.binaryVersion`。
 
-打包 Windows 執行檔：
+### 啟動
+
+```bash
+npx neu run
+```
+
+或雙擊 `start.bat`；要開發者工具時執行 `start.bat inspector`。
+
+### 包版（release）
 
 ```bash
 npx neu build --release
 ```
 
-產物在 `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe` 與 `resources.neu`。加 `--release` 時另有 `dist/stock-portfolio-release.zip`。只有 `bin/` 內實際存在的平台會被產出。
-
-### 便利腳本
-
-不想打指令時可直接雙擊根目錄的兩支腳本（等同上面的指令）：
-
-| 腳本 | 動作 |
-|---|---|
-| `start.bat` | `npx neu run`；加參數 `start.bat inspector` 等同 `--window-enable-inspector` |
-| `release.bat` | `npx neu build --release` |
-
-兩者都會先切到腳本所在目錄，並在 `node_modules/` 或 `bin/neutralino-win_x64.exe` 缺少時印出訊息後結束。結束時會 `pause`，方便雙擊執行時看到輸出。
+或雙擊 `release.bat`。產物在 `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe` 與 `resources.neu`，另有 `dist/stock-portfolio-release.zip`。
 
 打包後的 exe 以**行程的工作目錄**解析 `config/` 與 `logs/` 這類相對路徑。雙擊執行時工作目錄等於 exe 所在目錄，資料就在 exe 旁邊；若從其他目錄啟動（例如 `Start-Process` 未指定 `-WorkingDirectory`），資料會落在該目錄。`dist/stock-portfolio/neutralinojs.log` 是框架自己的日誌，與應用程式的 `logs/app.log` 無關。
 
@@ -64,9 +60,7 @@ npx neu build --release
 |---|---|---|
 | `build/` | Vite 的產出（前端 bundle） | 不納入 |
 | `dist/` | `neu build` 的產出（執行檔 + `resources.neu`） | 不納入 |
-| `bin/` | Neutralino 框架執行檔（`neu run` 需要） | 不納入 |
-
-Neutralino 的框架執行檔在 `bin/neutralino-win_x64.exe`。`neu` CLI 需要連上 GitHub Releases 才能取得它，在公司 proxy 環境下會失敗；若 `bin/` 為空，需手動從 [neutralinojs releases](https://github.com/neutralinojs/neutralinojs/releases) 取 `neutralinojs-v6.10.0.zip`，解壓後把 `neutralino-win_x64.exe` 放進 `bin/`。
+| `bin/` | Neutralino 框架執行檔（`neu run` 需要） | 納入 |
 
 ### 網路
 
@@ -86,7 +80,7 @@ stock-portfolio/
 ├── vite.config.ts
 ├── start.bat                  # 雙擊即啟動桌面應用程式
 ├── release.bat                # 雙擊即打包 Windows 執行檔
-├── bin/                       # 框架執行檔（neu run 需要，不納入版控）
+├── bin/                       # 框架執行檔（neu run 需要）
 ├── build/                     # Vite 產出（不納入版控）
 ├── dist/                      # neu build 產出（不納入版控）
 ├── config/                    # 設定檔（兩個 JSON 於首次執行時產生，不納入版控）

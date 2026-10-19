@@ -11,14 +11,6 @@ if not exist "node_modules\" (
   exit /b 1
 )
 
-if not exist "bin\neutralino-win_x64.exe" (
-  echo [錯誤] 找不到 bin\neutralino-win_x64.exe
-  echo        neu CLI 無法在公司 proxy 環境下載這個檔案，需手動取得
-  echo        版本與步驟見 README.md 的「執行」段落
-  pause
-  exit /b 1
-)
-
 if /i "%~1"=="inspector" (
   echo 啟動桌面應用程式（附開發者工具）...
   echo.

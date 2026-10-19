@@ -55,7 +55,7 @@ npx neu build --release                        # 打包 Windows 執行檔到 dis
 ```
 
 - `build/` 是 Vite 的產出，`dist/` 是 `neu build` 的產出，兩者不可共用（見 `docs/architecture.md` §7.2）
-- `bin/neutralino-win_x64.exe` 是框架執行檔，`neu run` 需要它。neu CLI 在公司 proxy 環境下無法下載，若 `bin/` 為空需手動放置
+- `bin/neutralino-win_x64.exe` 是框架執行檔，`neu run` 需要它，已納入版控；版本必須等於 `neutralino.config.json` 的 `cli.binaryVersion`
 - dev 模式下 `window` 的 `resize` 事件用 DOM 監聽即可，**不要**找 `windowResize` 事件，它不存在
 
 ## 文件語言
