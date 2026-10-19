@@ -244,6 +244,18 @@
 - [x] 同步 `README.md`（結構樹、啟動／包版／清除殘留程序的路徑）、`AGENTS.md`（目錄用途表）
 - [x] 實測：`scripts\start.bat` 起得了 app 且資料寫進根目錄的 `logs\app.log`（工作目錄正確）、`scripts\release.bat` 打包成功（exit 0，產物在 `dist\`）、`scripts\kill.bat` 收得掉（連 `cmd.exe` 包裝行程一起）
 
+## 使用者縮放（2026-10-19）
+
+- [x] Ctrl+= / Ctrl++ / Ctrl+- / Ctrl+0 / Ctrl+滾輪 由 app 自行實作，擋掉 WebView2 的原生頁面縮放 → `docs/adr/ADR-0018.md`
+- [x] 倍率 80%–200%、每格 10%、`Ctrl+0` 回 100%；常數與預設在 `domain/types.ts`，夾限與套用在 `ui/scale.ts`，按鍵與滾輪對映在 `ui/zoom.ts`
+- [x] 倍率乘在視窗寬度推得的因子上（`max(width/1100, 0.85) × zoom`）；量測固定在「下限 × 倍率」，縮放後重測內容並貼合視窗
+- [x] `portfolio.json` 加 `zoom`（`schemaVersion` 維持 1，缺欄位或非有限數值回 1），啟動時還原（F14）
+- [x] 畫面不顯示目前倍率（使用者決定）；同步 `docs/requirements.md`（F11、F14）、`docs/glossary.md`（縮放倍率）、`docs/architecture.md`（§3.3、§5.1）、`README.md`
+- [x] 測試：`scale`（倍率乘算、夾限、級距、往返不累積浮點誤差）、`zoom`（按鍵／滾輪對映、夾限、歸零）、`storage`（`zoom` 缺失／非法／合法）
+- [x] `tsc --noEmit` 與 128 個測試通過（原 116）
+- [x] 實機驗收（2026-10-19 盤中，2 檔持股）：一級距 10%（視窗 453 → 497 → 584 → 672 實體 px，等於內容自然寬 437 × 倍率 + 外框）；80%（366×281）與 200%（890×643）都完整可見，7 欄、總計列、狀態列都沒有裁切，也沒有水平捲軸；原生縮放沒有接手（視窗寬與倍率成正比）
+- [x] 還原驗收：`Ctrl+0` 回 100%（453×341）、`Ctrl+滾輪` 每格一跳、上下限夾在 80%／200%；`portfolio.json` 寫入 `zoom: 1.5` 後重啟直接開在 672×492
+
 ## 未排入 v1
 
 CSV 匯入/匯出、i18n 多語、亮色主題與切換鈕、交易明細與已實現損益、股利與費稅、官方 EOD 校正層、券商 API、自動更新。

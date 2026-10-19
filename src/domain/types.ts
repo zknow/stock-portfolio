@@ -61,8 +61,16 @@ export type SortDirection = 'asc' | 'desc'
 /** 報酬欄的顯示模式：比率（預設）或金額（F6、ADR-0015） */
 export type ReturnDisplay = 'rate' | 'amount'
 
+/** 使用者縮放倍率（F11、ADR-0018）：80%–200%，每格 10%，100% 為預設 */
+export const MIN_ZOOM = 0.8
+export const MAX_ZOOM = 2
+export const ZOOM_STEP = 0.1
+export const ZOOM_DEFAULT = 1
+
 export interface UiPreferences {
   sortKey: SortKey
   sortDirection: SortDirection
   returnDisplay: ReturnDisplay
+  /** 使用者縮放倍率，乘在等比縮放的因子之上 */
+  zoom: number
 }

@@ -1,5 +1,5 @@
 import { filesystem } from '@neutralinojs/lib'
-import { SORT_KEYS } from '../domain/types'
+import { SORT_KEYS, ZOOM_DEFAULT } from '../domain/types'
 import type { Holding, ReturnDisplay, SortKey, UiPreferences } from '../domain/types'
 import { isValidCode, isValidCost, isValidShares } from '../domain/validate'
 import { ensureDirectory } from './fsutil'
@@ -13,6 +13,7 @@ export const DEFAULT_PREFERENCES: UiPreferences = {
   sortKey: 'marketValue',
   sortDirection: 'desc',
   returnDisplay: 'rate',
+  zoom: ZOOM_DEFAULT,
 }
 
 export interface PortfolioFile extends UiPreferences {
@@ -53,6 +54,11 @@ function readReturnDisplay(value: unknown): ReturnDisplay {
   return value === 'amount' || value === 'rate' ? value : DEFAULT_PREFERENCES.returnDisplay
 }
 
+/** 舊檔沒有這個欄位，非有限數值一律回預設；超出上下限的值由 `ui/scale.ts` 的 `setZoom` 夾限（ADR-0018） */
+function readZoom(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : ZOOM_DEFAULT
+}
+
 export function parsePortfolio(text: string): PortfolioFile {
   const payload: unknown = JSON.parse(text)
   if (typeof payload !== 'object' || payload === null) throw new Error('portfolio.json 的頂層不是物件')
@@ -73,6 +79,7 @@ export function parsePortfolio(text: string): PortfolioFile {
     sortKey: readSortKey(record.sortKey),
     sortDirection: record.sortDirection === 'asc' ? 'asc' : 'desc',
     returnDisplay: readReturnDisplay(record.returnDisplay),
+    zoom: readZoom(record.zoom),
     holdings: holdings.filter((holding): holding is Holding => holding !== null),
   }
 }

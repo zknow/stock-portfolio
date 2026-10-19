@@ -75,7 +75,8 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 | 檔案 | 職責 |
 |---|---|
 | `theme.css` | 深色 design token（CSS 變數）、紅漲綠跌色票 |
-| `scale.ts` | 監聽 DOM `resize`，更新縮放用的 CSS 變數；提供縮放下限 0.85 與視窗高度比例（ADR-0016） |
+| `scale.ts` | 持有使用者縮放倍率（80%–200%）、監聽 DOM `resize`，更新縮放用的 CSS 變數；提供縮放下限 0.85 與視窗高度比例（ADR-0016、ADR-0018） |
+| `zoom.ts` | Ctrl 縮放的鍵盤與滾輪對映（純函式）與事件綁定；擋掉 WebView2 的原生頁面縮放（ADR-0018） |
 | `TableView.ts` | 7 欄表格（報酬欄依顯示模式二選一）、欄頭排序、總計列、無成交列淡化、編輯模式的就地編輯與操作欄、空狀態（欄頭保留，訊息為表格內的一列，見 F1） |
 | `EditControls.ts` | 工具列模式切換鈕、新增表單、強制新增逃生門、表單錯誤訊息 |
 | `StatusBar.ts` | 更新時間、來源標籤、降級警示、非當日資料標記 |
@@ -119,7 +120,7 @@ export interface QuoteProvider {
 main.ts
   → storage.load()                    讀 config/portfolio.json
   → symbolTable.ensureFresh()         非當日則抓兩個官方端點
-  → ui 建立（套用排序、視窗尺寸貼合內容、主題、縮放）
+  → ui 建立（套用排序、縮放倍率、視窗尺寸貼合內容、主題）
   → QuoteService.start()
         若在交易時段 → 立即抓一次，之後每 5 秒
         若不在      → 抓一次即停，狀態列顯示「已收盤 / 非交易時段」
@@ -343,3 +344,4 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0015](adr/ADR-0015.md) | 報酬欄的顯示模式切換與投組今日報酬率 |
 | [ADR-0016](adr/ADR-0016.md) | 欄寬貼齊內容，視窗尺寸由內容自然寬度推得（不隨視窗拉開已由 ADR-0017 取代） |
 | [ADR-0017](adr/ADR-0017.md) | 欄寬下限貼齊內容、比內容寬時欄位一起拉寬填滿邊界 |
+| [ADR-0018](adr/ADR-0018.md) | 使用者縮放自行實作，擋掉 WebView2 的原生頁面縮放 |

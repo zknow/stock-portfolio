@@ -15,9 +15,10 @@ import { createEditControls, parseNumber } from './ui/EditControls'
 import type { EditControls, EditMode } from './ui/EditControls'
 import { createStatusBar } from './ui/StatusBar'
 import type { StatusBar } from './ui/StatusBar'
-import { BASE_WIDTH, MIN_SCALE, applyScale, minHeightFor, watchResize } from './ui/scale'
+import { BASE_WIDTH, MIN_SCALE, applyScale, minHeightFor, setZoom, watchResize } from './ui/scale'
 import { createTableView, defaultDirection, mapSortKey, sortRows } from './ui/TableView'
 import type { EditDraft, DraftField, TableView } from './ui/TableView'
+import { watchZoom } from './ui/zoom'
 import './ui/theme.css'
 
 const SAVE_DELAY_MS = 500
@@ -86,11 +87,12 @@ function refresh(): void {
   syncMinSize()
 }
 
-/** F11：內容在縮放下限下的自然寬度，加上目前的垂直捲軸寬度即視窗需要的寬度（ADR-0016） */
+/** F11：在縮放下限乘上使用者倍率下量測內容的自然寬度，加上目前的垂直捲軸寬度即視窗需要的寬度（ADR-0016） */
 function measureMinSize(): { width: number; height: number } {
   const board = root.querySelector<HTMLElement>('.board')
   const form = editControls.form
 
+  // 傳入下限對應的寬度，等同把 --scale 固定在「下限 × 使用者倍率」
   applyScale(BASE_WIDTH * MIN_SCALE)
   // 新增表單可換行（flex-wrap），不會造成水平溢出，量測時排除。
   // 不能用 hidden：那會讓輸入框在輪詢重繪時失焦
@@ -135,6 +137,13 @@ function sortBy(key: SortKey): void {
 function setDisplay(display: ReturnDisplay): void {
   portfolio = { ...portfolio, returnDisplay: display, sortKey: mapSortKey(portfolio.sortKey, display) }
   editControls.setDisplay(display)
+  refresh()
+  scheduleSave()
+}
+
+/** F11：Ctrl 縮放。套用倍率、重新貼合視窗並寫回偏好（ADR-0018） */
+function changeZoom(value: number): void {
+  portfolio = { ...portfolio, zoom: setZoom(value) }
   refresh()
   scheduleSave()
 }
@@ -336,16 +345,17 @@ async function main(): Promise<void> {
   await init()
 
   buildShell()
-  applyScale(window.innerWidth)
 
   const loaded = await load()
   portfolio = loaded.file
   loadError = loaded.error
+  setZoom(portfolio.zoom)
   editControls.setEnabled(loadError === null)
   editControls.setDisplay(portfolio.returnDisplay)
   refresh()
 
   watchResize()
+  watchZoom(changeZoom)
 
   await applyWindowSize()
   symbols = await ensureFresh(new Date())

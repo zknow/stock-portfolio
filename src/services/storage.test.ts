@@ -52,6 +52,13 @@ describe('parsePortfolio', () => {
     )
   })
 
+  it('zoom 缺失或非法時回預設，合法值原樣讀出', () => {
+    expect(parsePortfolio(JSON.stringify(VALID)).zoom).toBe(DEFAULT_PREFERENCES.zoom)
+    expect(parsePortfolio(JSON.stringify({ ...VALID, zoom: 1.5 })).zoom).toBe(1.5)
+    expect(parsePortfolio(JSON.stringify({ ...VALID, zoom: '150%' })).zoom).toBe(DEFAULT_PREFERENCES.zoom)
+    expect(parsePortfolio(JSON.stringify({ ...VALID, zoom: null })).zoom).toBe(DEFAULT_PREFERENCES.zoom)
+  })
+
   it('持股不合法時視為損毀', () => {
     expect(() => parsePortfolio(JSON.stringify({ ...VALID, holdings: [{ code: '2330' }] }))).toThrow('不合法的持股')
     expect(() => parsePortfolio(JSON.stringify({ ...VALID, holdings: [{ ...VALID.holdings[0], shares: 0 }] }))).toThrow(

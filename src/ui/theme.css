@@ -29,7 +29,7 @@
   --scroll-thumb: rgba(255, 255, 255, 0.28);
   --scroll-track: transparent;
 
-  /* F11：等比縮放因子，由 ui/scale.ts 依視窗寬度寫入 */
+  /* F11：等比縮放因子，由 ui/scale.ts 依視窗寬度與使用者倍率寫入 */
   --scale: 1;
   --fs-label: calc(12px * var(--scale));
   --fs-cell: calc(13px * var(--scale));
