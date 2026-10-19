@@ -18,6 +18,7 @@
 | `config/` | 執行期設定。`portfolio.json`（庫存與 UI 偏好）、`symbols.json`（對照表快取）。**不得在此放 Neutralino 設定** |
 | `logs/` | 只寫 `app.log` |
 | `resources/` | `icons/` 與字型檔。不放圖片素材 |
+| `scripts/` | 雙擊用的便利腳本：`start.bat`（啟動，`inspector` 參數附開發者工具）、`release.bat`（打包）、`kill.bat`（清除殘留的專案程序）。一律 `cd /d "%~dp0.."` 切到專案根目錄再執行 |
 
 `neutralino.config.json` 必須在專案根目錄，Neutralino 不接受其他位置。
 

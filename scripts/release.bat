@@ -2,8 +2,8 @@
 setlocal
 
 rem 本機是 UTF-8 系統（ACP 65001），本檔以 UTF-8 無 BOM 儲存，不要加 chcp
-rem 雙擊時的工作目錄不一定是專案根目錄，一律切到這支腳本所在位置
-cd /d "%~dp0"
+rem 雙擊時的工作目錄不一定是專案根目錄，一律切到專案根目錄（這支腳本在 scripts\）
+cd /d "%~dp0.."
 
 if not exist "node_modules\" (
   echo [錯誤] 找不到 node_modules，請先執行：npm install

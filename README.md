@@ -42,7 +42,7 @@ npm install
 npx neu run
 ```
 
-或雙擊 `start.bat`；要開發者工具時執行 `start.bat inspector`。
+或雙擊 `scripts\start.bat`；要開發者工具時執行 `scripts\start.bat inspector`。
 
 ### 包版（release）
 
@@ -50,9 +50,15 @@ npx neu run
 npx neu build --release
 ```
 
-或雙擊 `release.bat`。產物在 `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe` 與 `resources.neu`，另有 `dist/stock-portfolio-release.zip`。
+或雙擊 `scripts\release.bat`。產物在 `dist/stock-portfolio/`：`stock-portfolio-win_x64.exe` 與 `resources.neu`，另有 `dist/stock-portfolio-release.zip`。
 
 打包後的 exe 以**行程的工作目錄**解析 `config/` 與 `logs/` 這類相對路徑。雙擊執行時工作目錄等於 exe 所在目錄，資料就在 exe 旁邊；若從其他目錄啟動（例如 `Start-Process` 未指定 `-WorkingDirectory`），資料會落在該目錄。`dist/stock-portfolio/neutralinojs.log` 是框架自己的日誌，與應用程式的 `logs/app.log` 無關。
+
+### 清除殘留程序
+
+`npx neu run` 或測試結束後若行程沒被關掉（`neutralino-win_x64.exe`、Vite / esbuild / vitest 的 `node.exe`），雙擊 `scripts\kill.bat` 清除。
+
+判準只有兩類：執行檔位於本專案目錄下（`bin\`、`dist\`、`node_modules\`），或 `node.exe` 的命令列指向本專案的 `node_modules` 工具鏈（vite / vitest / esbuild / @neutralinojs）。其他 `node.exe`、開著本專案的編輯器與 agent 都不受影響；被結束的行程連同其子行程（webview 等）一併關閉。
 
 ### 目錄別名
 
@@ -78,8 +84,6 @@ stock-portfolio/
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
-├── start.bat                  # 雙擊即啟動桌面應用程式
-├── release.bat                # 雙擊即打包 Windows 執行檔
 ├── bin/                       # 框架執行檔（neu run 需要）
 ├── build/                     # Vite 產出（不納入版控）
 ├── dist/                      # neu build 產出（不納入版控）
@@ -95,6 +99,10 @@ stock-portfolio/
 │   └── app.log
 ├── resources/                 # 其他資源（Vite 的 publicDir，會複製到 build/）
 │   └── icons/appIcon.png
+├── scripts/                   # 雙擊用的便利腳本
+│   ├── start.bat              # 啟動桌面應用程式（加 inspector 附開發者工具）
+│   ├── release.bat            # 打包 Windows 執行檔
+│   └── kill.bat               # 清除殘留的專案程序
 └── src/                       # 原始程式碼
     ├── domain/                # 模型與計算，零依賴
     ├── services/              # 報價、儲存、對照表、日誌
