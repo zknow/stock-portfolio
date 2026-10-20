@@ -51,11 +51,14 @@ npm install
 npm run dev                                    # Vite 開發伺服器
 npx neu run                                    # 桌面應用程式（會帶起 Vite）
 npx neu run -- --window-enable-inspector        # 同上，附開發者工具
-npm test                                       # vitest（src/domain、src/services、src/ui 的純函式）
+npm test                                       # vitest（純函式；services 以 mock 隔離 Neutralino API）
 npx neu build --release                        # 打包 Windows 執行檔到 dist/
 ```
 
+- Node.js 22.12 以上（`vitest` 的下限）
 - `scripts\start.bat` 與 `scripts\release.bat` 找不到 `node_modules\` 時會自己執行 `npm install`，不必先手動跑
+- 打包後的 exe 以行程的工作目錄解析 `config/`、`logs/` 這類相對路徑，不是以 exe 所在目錄為準；`dist/stock-portfolio/neutralinojs.log` 是框架日誌，與 `logs/app.log` 無關
+- `scripts\kill.bat` 只結束兩類行程：執行檔位於本專案目錄下（`bin\`、`dist\`、`node_modules\`），或 `node.exe` 的命令列指向本專案的 `node_modules` 工具鏈（vite / vitest / esbuild / @neutralinojs）
 - `scripts\*.bat` 以 ANSI（CP950 / Big5）儲存，改動時用 PowerShell 的 950 編碼讀寫，不要存成 UTF-8：cmd 以主控台代碼頁解碼批次檔，UTF-8 的中文會被逐字錯讀並吃掉後面的字元，`chcp` 在檔內改不掉
 - `build/` 是 Vite 的產出，`dist/` 是 `neu build` 的產出，兩者不可共用（見 `docs/architecture.md` §7.2）
 - `bin/neutralino-win_x64.exe` 是框架執行檔，`neu run` 需要它，已納入版控；版本必須等於 `neutralino.config.json` 的 `cli.binaryVersion`

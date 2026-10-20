@@ -288,6 +288,7 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 ### 7.3 檔案系統
 
 - `dataLocation: "app"`（預設）：資料留在應用程式目錄，符合 ADR-0004
+- 打包後的 exe 以**行程的工作目錄**解析 `config/`、`logs/` 這類相對路徑。雙擊執行時工作目錄等於 exe 所在目錄；用 `Start-Process` 未指定 `-WorkingDirectory` 時，資料會落在呼叫端目錄。`dist/stock-portfolio/neutralinojs.log` 由框架自己寫，與 `logs/app.log` 無關
 - `filesystemScopes` **必須留空或省略**。v6.10.0 新增此限制，設定後範圍外的檔案存取會以 `NE_FS_SCOPERR` 失敗
 - `filesystem.createDirectory` 自 v5.0.0 起支援遞迴建目錄；`writeFile` **不保證**自動建立父目錄，寫入前一律先呼叫 `createDirectory`
 - **`createDirectory` 在目錄已存在時會回報 `NE_FS_DIRCRER`**（實測）。因此呼叫端必須把這個錯誤碼視為成功，否則第二次啟動就會失敗。`storage.ts` 與 `logger.ts` 都必須處理
