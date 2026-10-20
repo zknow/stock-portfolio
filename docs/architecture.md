@@ -47,7 +47,7 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 
 | 檔案 | 職責 |
 |---|---|
-| `types.ts` | `Holding`、`Quote`、`QuoteTarget`、`SymbolEntry`、`Market`、`QuoteSource`、`QuoteBatch`、`SortKey`、`SortDirection`、`UiPreferences` |
+| `types.ts` | `Holding`、`Quote`、`QuoteTarget`、`SymbolEntry`、`Market`、`QuoteSource`、`MarketIndex`、`QuoteBatch`、`SortKey`、`SortDirection`、`UiPreferences` |
 | `quote.ts` | 解析來源價數字串、由正規化輸入建構 `Quote`（估值價、是否有成交）、資料日期是否非當日 |
 | `pnl.ts` | 總報酬、今日報酬、市值、投組總計（含缺值排除與排除檔數） |
 | `format.ts` | 千分位、價格 2 位、金額 0 位、報酬率 2 位加 `%`、缺值 `—`、漲跌語意 |
@@ -64,8 +64,8 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 | `fsutil.ts` | `ensureDirectory`，把 `NE_FS_DIRCRER` 視為成功 |
 | `quote/QuoteProvider.ts` | `QuoteProvider` 介面 |
 | `quote/QuoteService.ts` | 交易時段判斷、輪詢排程、失敗計數、降級、回試、狀態廣播 |
-| `quote/MisProvider.ts` | 組 `ex_ch` 批次字串、呼叫 MIS、解析回應、現價解析順序（`trade.z` → `z` → 當日無成交）、壞代號判定（`c === ""`）、正規化為 `Quote` |
-| `quote/YahooProvider.ts` | 代號轉 `.TW` / `.TWO`、解析 `v8/chart`、正規化為 `Quote` |
+| `quote/MisProvider.ts` | 組 `ex_ch` 批次字串（固定附加 `tse_t00.tw`）、呼叫 MIS、解析回應、現價解析順序（`trade.z` → `z` → 當日無成交）、壞代號判定（`c === ""`）、正規化為 `Quote` 與 `MarketIndex` |
+| `quote/YahooProvider.ts` | 代號轉 `.TW` / `.TWO`、解析 `v8/chart`、正規化為 `Quote`；另以 `^TWII` 取得加權指數 |
 | `symbolTable.ts` | 抓取並合併兩個官方端點、讀寫 `config/symbols.json`、代號查詢 |
 | `storage.ts` | 讀寫 `config/portfolio.json`、`schemaVersion` 遷移 |
 | `logger.ts` | 寫入 `logs/app.log`，只記異常與狀態轉換 |
@@ -77,9 +77,9 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 | `theme.css` | 深色 design token（CSS 變數）、紅漲綠跌色票 |
 | `scale.ts` | 持有使用者縮放倍率（80%–200%）、監聽 DOM `resize`，更新縮放用的 CSS 變數；提供縮放下限 0.85 與視窗高度比例（ADR-0016、ADR-0018） |
 | `zoom.ts` | Ctrl 縮放的鍵盤與滾輪對映（純函式）與事件綁定；擋掉 WebView2 的原生頁面縮放（ADR-0018） |
-| `TableView.ts` | 7 欄表格（報酬欄依顯示模式二選一）、欄頭排序、總計列、無成交列淡化、編輯模式的就地編輯與操作欄、空狀態（欄頭保留，訊息為表格內的一列，見 F1） |
-| `EditControls.ts` | 工具列模式切換鈕、新增表單、強制新增逃生門、表單錯誤訊息 |
-| `StatusBar.ts` | 更新時間、來源標籤、降級警示、非當日資料標記 |
+| `TableView.ts` | 表格（報酬欄依顯示模式二選一、成本欄位依成本開關隱藏）、欄頭排序、總計列、無成交列淡化、編輯模式的就地編輯與操作欄、空狀態（欄頭保留，訊息為表格內的一列，見 F1、F17） |
+| `EditControls.ts` | 工具列成本開關、報酬顯示切換鈕、模式切換鈕、新增表單、強制新增逃生門、表單錯誤訊息 |
+| `StatusBar.ts` | 更新時間、來源標籤、降級警示、非當日資料標記、右側加權指數 |
 
 ## 4. 關鍵介面
 
@@ -98,9 +98,16 @@ export interface Quote {
   dataDate: string
 }
 
+export interface MarketIndex {
+  price: number | null
+  previousClose: number | null
+  dataDate: string
+}
+
 export interface QuoteBatch {
   source: 'mis' | 'yahoo'
   quotes: Quote[]
+  index: MarketIndex | null
   fetchedAt: string
 }
 
@@ -133,11 +140,11 @@ main.ts
 每 5 秒（僅交易時段）
   → QuoteService 組成 targets（code + market）
   → 當前 provider.fetchQuotes(targets)
-        MisProvider   : ex_ch=tse_2330.tw|otc_6488.tw|...  一次請求
-        YahooProvider : 逐檔 .TW / .TWO（無批次端點）
+        MisProvider   : ex_ch=tse_2330.tw|otc_6488.tw|...|tse_t00.tw  一次請求
+        YahooProvider : 逐檔 .TW / .TWO（無批次端點）＋ ^TWII 取加權指數
         provider 一律經 services/http.ts 取字串，不知道實際傳輸方式
-  → 正規化為 QuoteBatch（services 層完成解析）
-  → 成功：domain/pnl 計算 → ui 重繪 → 狀態列更新時間
+  → 正規化為 QuoteBatch（quotes + index，services 層完成解析）
+  → 成功：domain/pnl 計算 → ui 重繪 → 狀態列更新時間與加權指數
     失敗：failCount++；達 3 次 → 切換為 YahooProvider、狀態列轉警示、寫 log
   → 降級中每 5 分鐘試回 MIS，成功即恢復、寫 log
   → 13:30 後補抓一次確認收盤價 → 停止輪詢
@@ -170,6 +177,18 @@ main.ts
 
 舊檔沒有 `returnDisplay` 時視為 `rate`；`portfolio.json` 損毀時切換仍即時生效，但不寫回原檔（見 §8）。
 
+### 5.5 成本開關
+
+```
+使用者按工具列的「成本」開關
+  → 切換 portfolio.showCost
+  → 目前排序鍵落在被隱藏的欄位（股數、平均成本、總報酬、市值）時改用今日報酬，方向不變
+  → TableView 重建表頭（欄數、總計列項目跟著變）→ 重繪
+  → storage.save()
+```
+
+舊檔沒有 `showCost` 時視為開啟（顯示成本欄位）。`visibleSortKey()` 是純函式，切換規則由 vitest 覆蓋。
+
 ## 6. 檔案格式
 
 ### 6.1 `config/portfolio.json`
@@ -180,6 +199,7 @@ main.ts
   "sortKey": "marketValue",
   "sortDirection": "desc",
   "returnDisplay": "rate",
+  "showCost": true,
   "holdings": [
     { "code": "2330", "name": "台積電", "market": "listing", "shares": 1000, "averageCost": 850.5 }
   ]
@@ -321,6 +341,7 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | `y` 缺失 | 估值價為 `null` → 報酬欄顯示 `—`、該列排除於總計 |
 | `portfolio.json` 損毀 | 拒絕覆寫，log 記錄，UI 顯示錯誤並保留原檔 |
 | `symbols.json` 過期且更新失敗 | 沿用舊快取，log 記錄，不阻擋啟動 |
+| 加權指數取不到 | `QuoteBatch.index` 為 `null`，狀態列不顯示指數，不影響持股報價與降級判定 |
 | 非交易日啟動 | 抓一次即停，狀態列顯示「非交易時段」；首抓沒取得報價則延遲 5 秒重試一次（ADR-0014） |
 
 ## 9. ADR 索引
@@ -345,3 +366,5 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0016](adr/ADR-0016.md) | 欄寬貼齊內容，視窗尺寸由內容自然寬度推得（不隨視窗拉開已由 ADR-0017 取代） |
 | [ADR-0017](adr/ADR-0017.md) | 欄寬下限貼齊內容、比內容寬時欄位一起拉寬填滿邊界 |
 | [ADR-0018](adr/ADR-0018.md) | 使用者縮放自行實作，擋掉 WebView2 的原生頁面縮放 |
+| [ADR-0019](adr/ADR-0019.md) | 加權指數隨持股報價同批取得，顯示於狀態列右側 |
+| [ADR-0020](adr/ADR-0020.md) | 成本欄位以工具列開關整組隱藏，狀態寫入 UI 偏好 |

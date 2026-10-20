@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildChartUrl, parseChartResponse, toYahooSymbol } from './YahooProvider'
+import { buildChartUrl, buildIndexUrl, parseChartResponse, toYahooSymbol } from './YahooProvider'
 
 function chart(meta: Record<string, unknown>): string {
   return JSON.stringify({ chart: { result: [{ meta, timestamp: [1760000000] }], error: null } })
@@ -16,6 +16,14 @@ describe('buildChartUrl', () => {
   it('帶上 interval 與 range', () => {
     expect(buildChartUrl({ code: '2330', market: 'listing' })).toBe(
       'https://query1.finance.yahoo.com/v8/finance/chart/2330.TW?interval=1d&range=1d',
+    )
+  })
+})
+
+describe('buildIndexUrl', () => {
+  it('加權指數用 ^TWII', () => {
+    expect(buildIndexUrl()).toBe(
+      'https://query1.finance.yahoo.com/v8/finance/chart/^TWII?interval=1d&range=1d',
     )
   })
 })

@@ -16,7 +16,7 @@ import type { EditControls, EditMode } from './ui/EditControls'
 import { createStatusBar } from './ui/StatusBar'
 import type { StatusBar } from './ui/StatusBar'
 import { BASE_WIDTH, MIN_SCALE, applyScale, minHeightFor, setZoom, watchResize } from './ui/scale'
-import { createTableView, defaultDirection, mapSortKey, sortRows } from './ui/TableView'
+import { createTableView, defaultDirection, mapSortKey, sortRows, visibleSortKey } from './ui/TableView'
 import type { EditDraft, DraftField, TableView } from './ui/TableView'
 import { watchZoom } from './ui/zoom'
 import './ui/theme.css'
@@ -81,9 +81,10 @@ function refresh(): void {
     { key: sortKey, direction: sortDirection },
     { mode, draft, error: editError },
     portfolio.returnDisplay,
+    portfolio.showCost,
   )
   tally.textContent = `共 ${rows.length} 檔`
-  statusBar.render({ status, error: loadError })
+  statusBar.render({ status, index: batch?.index ?? null, error: loadError })
   syncMinSize()
 }
 
@@ -137,6 +138,18 @@ function sortBy(key: SortKey): void {
 function setDisplay(display: ReturnDisplay): void {
   portfolio = { ...portfolio, returnDisplay: display, sortKey: mapSortKey(portfolio.sortKey, display) }
   editControls.setDisplay(display)
+  refresh()
+  scheduleSave()
+}
+
+/** F17：成本欄位開關。目前排序鍵落在被隱藏的欄位時改用今日報酬 */
+function setCostVisibility(showCost: boolean): void {
+  portfolio = {
+    ...portfolio,
+    showCost,
+    sortKey: visibleSortKey(portfolio.sortKey, portfolio.returnDisplay, showCost),
+  }
+  editControls.setCost(showCost)
   refresh()
   scheduleSave()
 }
@@ -286,6 +299,7 @@ function buildShell(): void {
     submit: addHolding,
     onModeChange: setMode,
     onDisplayChange: setDisplay,
+    onCostChange: setCostVisibility,
   })
 
   toolbar.append(title, tally, editControls.toolbar)
@@ -352,6 +366,7 @@ async function main(): Promise<void> {
   setZoom(portfolio.zoom)
   editControls.setEnabled(loadError === null)
   editControls.setDisplay(portfolio.returnDisplay)
+  editControls.setCost(portfolio.showCost)
   refresh()
 
   watchResize()

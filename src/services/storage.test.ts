@@ -52,6 +52,12 @@ describe('parsePortfolio', () => {
     )
   })
 
+  it('showCost 缺失或非法時回預設（顯示），合法值原樣讀出', () => {
+    expect(parsePortfolio(JSON.stringify(VALID)).showCost).toBe(DEFAULT_PREFERENCES.showCost)
+    expect(parsePortfolio(JSON.stringify({ ...VALID, showCost: false })).showCost).toBe(false)
+    expect(parsePortfolio(JSON.stringify({ ...VALID, showCost: '否' })).showCost).toBe(DEFAULT_PREFERENCES.showCost)
+  })
+
   it('zoom 缺失或非法時回預設，合法值原樣讀出', () => {
     expect(parsePortfolio(JSON.stringify(VALID)).zoom).toBe(DEFAULT_PREFERENCES.zoom)
     expect(parsePortfolio(JSON.stringify({ ...VALID, zoom: 1.5 })).zoom).toBe(1.5)

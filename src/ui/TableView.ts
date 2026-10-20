@@ -9,16 +9,20 @@ interface Column {
   label: string
 }
 
-/** F1：順序即此處的順序。兩個報酬欄依顯示模式二選一（ADR-0015） */
-const BASE_COLUMNS: Column[] = [
+/** F1：順序即此處的順序。成本欄位整組受 F17 的開關控制 */
+const IDENTITY_COLUMNS: Column[] = [
   { key: 'code', label: '代號' },
   { key: 'name', label: '名稱' },
-  { key: 'shares', label: '股數' },
-  { key: 'averageCost', label: '平均成本' },
-  { key: 'price', label: '現價' },
 ]
 
-const RETURN_COLUMNS: Record<ReturnDisplay, Column[]> = {
+const COST_COLUMNS: Column[] = [
+  { key: 'shares', label: '股數' },
+  { key: 'averageCost', label: '平均成本' },
+]
+
+const PRICE_COLUMN: Column = { key: 'price', label: '現價' }
+
+const RETURN_COLUMNS: Record<ReturnDisplay, [Column, Column]> = {
   rate: [
     { key: 'totalReturnRate', label: '總報酬率' },
     { key: 'todayReturnRate', label: '今日報酬率' },
@@ -29,8 +33,15 @@ const RETURN_COLUMNS: Record<ReturnDisplay, Column[]> = {
   ],
 }
 
-export function columnsFor(display: ReturnDisplay): Column[] {
-  return [...BASE_COLUMNS, ...RETURN_COLUMNS[display]]
+/** F17：關閉成本時只留代號、名稱、現價、今日報酬 */
+export function columnsFor(display: ReturnDisplay, showCost = true): Column[] {
+  const [total, today] = RETURN_COLUMNS[display]
+  return [
+    ...IDENTITY_COLUMNS,
+    ...(showCost ? COST_COLUMNS : []),
+    PRICE_COLUMN,
+    ...(showCost ? [total, today] : [today]),
+  ]
 }
 
 /** 同一個指標的兩個排序鍵：金額與比率 */
@@ -44,6 +55,20 @@ export function mapSortKey(key: SortKey, display: ReturnDisplay): SortKey {
   const pair = RETURN_KEY_PAIRS.find((keys) => keys.includes(key))
   if (pair === undefined) return key
   return display === 'rate' ? pair[1] : pair[0]
+}
+
+/** 關閉成本時會一起消失的排序鍵（F17） */
+const COST_SORT_KEYS: ReadonlySet<SortKey> = new Set<SortKey>([
+  'shares',
+  'averageCost',
+  'totalReturn',
+  'totalReturnRate',
+  'marketValue',
+])
+
+/** 切換成本顯示時，若排序鍵落在被隱藏的欄位就改用今日報酬，方向不變（F17） */
+export function visibleSortKey(key: SortKey, display: ReturnDisplay, showCost: boolean): SortKey {
+  return showCost || !COST_SORT_KEYS.has(key) ? key : mapSortKey('todayReturn', display)
 }
 
 /** 數字欄：決定欄頭對齊與首次點擊的方向。`marketValue` 不顯示但仍為數字欄 */
@@ -103,7 +128,14 @@ export interface TableHandlers {
 }
 
 export interface TableView {
-  render(rows: PnlRow[], totals: PnlTotals, sort: SortState, edit: TableEdit, display: ReturnDisplay): void
+  render(
+    rows: PnlRow[],
+    totals: PnlTotals,
+    sort: SortState,
+    edit: TableEdit,
+    display: ReturnDisplay,
+    showCost: boolean,
+  ): void
 }
 
 /** 首次點擊某欄時的起始方向：數字欄遞減，文字欄遞增 */
@@ -247,34 +279,31 @@ function rowFor(
   edit: TableEdit,
   handlers: TableHandlers,
   display: ReturnDisplay,
+  showCost: boolean,
 ): HTMLTableRowElement {
   const element = document.createElement('tr')
   if (row.quote !== null && !row.quote.traded) element.className = 'untraded'
 
   const { code, name } = row.holding
-  element.append(
-    cell(code, ''),
-    cell(name, ''),
-    editableCell(row, edit, handlers, 'shares'),
-    editableCell(row, edit, handlers, 'averageCost'),
-    priceCell(row),
-    ...returnCells(row, display),
-    actionsCell(row, edit, handlers),
-  )
+  element.append(cell(code, ''), cell(name, ''))
+  if (showCost) element.append(editableCell(row, edit, handlers, 'shares'), editableCell(row, edit, handlers, 'averageCost'))
+  element.append(priceCell(row), ...returnCells(row, display, showCost), actionsCell(row, edit, handlers))
   return element
 }
 
-/** 兩個報酬欄依顯示模式二選一（F6） */
-function returnCells(row: PnlRow, display: ReturnDisplay): HTMLTableCellElement[] {
-  return display === 'rate'
-    ? [
-        valueCell(row.totalReturnRate, formatRate(row.totalReturnRate)),
-        valueCell(row.todayReturnRate, formatRate(row.todayReturnRate)),
-      ]
-    : [
-        valueCell(row.totalReturn, formatAmount(row.totalReturn)),
-        valueCell(row.todayReturn, formatAmount(row.todayReturn)),
-      ]
+/** 兩個報酬欄依顯示模式二選一（F6）；關閉成本時只留今日報酬（F17） */
+function returnCells(row: PnlRow, display: ReturnDisplay, showCost: boolean): HTMLTableCellElement[] {
+  const today =
+    display === 'rate'
+      ? valueCell(row.todayReturnRate, formatRate(row.todayReturnRate))
+      : valueCell(row.todayReturn, formatAmount(row.todayReturn))
+  if (!showCost) return [today]
+
+  const total =
+    display === 'rate'
+      ? valueCell(row.totalReturnRate, formatRate(row.totalReturnRate))
+      : valueCell(row.totalReturn, formatAmount(row.totalReturn))
+  return [total, today]
 }
 
 function pair(label: string, text: string, direction: Direction): HTMLElement {
@@ -288,17 +317,19 @@ function pair(label: string, text: string, direction: Direction): HTMLElement {
   return box
 }
 
-/** 總計列的兩個報酬項目跟著顯示模式（F12）。總成本與總市值不受影響 */
-function returnPairs(values: PnlTotals, display: ReturnDisplay): HTMLElement[] {
-  return display === 'rate'
-    ? [
-        pair('總報酬率', formatRate(values.totalReturnRate), directionOf(values.totalReturnRate)),
-        pair('今日報酬率', formatRate(values.todayReturnRate), directionOf(values.todayReturnRate)),
-      ]
-    : [
-        pair('總報酬金額', `NT$${formatAmount(values.totalReturn)}`, directionOf(values.totalReturn)),
-        pair('今日報酬金額', `NT$${formatAmount(values.todayReturn)}`, directionOf(values.todayReturn)),
-      ]
+/** 總計列的報酬項目跟著顯示模式（F12）；關閉成本時只留今日報酬（F17） */
+function returnPairs(values: PnlTotals, display: ReturnDisplay, showCost: boolean): HTMLElement[] {
+  const today =
+    display === 'rate'
+      ? pair('今日報酬率', formatRate(values.todayReturnRate), directionOf(values.todayReturnRate))
+      : pair('今日報酬金額', `NT$${formatAmount(values.todayReturn)}`, directionOf(values.todayReturn))
+  if (!showCost) return [today]
+
+  const total =
+    display === 'rate'
+      ? pair('總報酬率', formatRate(values.totalReturnRate), directionOf(values.totalReturnRate))
+      : pair('總報酬金額', `NT$${formatAmount(values.totalReturn)}`, directionOf(values.totalReturn))
+  return [total, today]
 }
 
 interface FocusSnapshot {
@@ -323,13 +354,15 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
   let headers: Array<{ column: Column; th: HTMLTableCellElement }> = []
   let actionsHead = document.createElement('th')
   let shownDisplay: ReturnDisplay | null = null
+  let shownShowCost: boolean | null = null
 
-  /** 欄數與欄頭文字都跟著顯示模式走，只在切換時重建（ADR-0015） */
-  function buildHead(display: ReturnDisplay): void {
+  /** 欄數與欄頭文字都跟著顯示模式與成本開關走，只在切換時重建（ADR-0015、ADR-0020） */
+  function buildHead(display: ReturnDisplay, showCost: boolean): void {
     shownDisplay = display
+    shownShowCost = showCost
     const headRow = document.createElement('tr')
 
-    headers = columnsFor(display).map((column) => {
+    headers = columnsFor(display, showCost).map((column) => {
       const th = document.createElement('th')
       if (NUMERIC_KEYS.has(column.key)) th.className = 'numeric'
 
@@ -373,10 +406,10 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
   }
 
   /** 空狀態：訊息放在表格內的一列，欄頭照常顯示，視窗寬度才與只有一列資料時一致（F1、F11） */
-  function emptyRow(mode: EditMode, display: ReturnDisplay): HTMLTableRowElement {
+  function emptyRow(mode: EditMode, display: ReturnDisplay, showCost: boolean): HTMLTableRowElement {
     const row = document.createElement('tr')
     const element = cell('', 'empty')
-    element.colSpan = columnsFor(display).length + 1
+    element.colSpan = columnsFor(display, showCost).length + 1
 
     element.append(span('尚未新增任何持股', 'empty-title'))
     if (mode === 'edit') {
@@ -392,10 +425,10 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
   }
 
   return {
-    render(rows, values, sort, edit, display) {
+    render(rows, values, sort, edit, display, showCost) {
       const focus = captureFocus()
 
-      if (shownDisplay !== display) buildHead(display)
+      if (shownDisplay !== display || shownShowCost !== showCost) buildHead(display, showCost)
 
       for (const { column, th } of headers) {
         if (column.key === sort.key) {
@@ -408,7 +441,9 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
 
       const isEmpty = rows.length === 0
       body.replaceChildren(
-        ...(isEmpty ? [emptyRow(edit.mode, display)] : rows.map((row) => rowFor(row, edit, handlers, display))),
+        ...(isEmpty
+          ? [emptyRow(edit.mode, display, showCost)]
+          : rows.map((row) => rowFor(row, edit, handlers, display, showCost))),
       )
 
       const notes = document.createElement('div')
@@ -420,12 +455,13 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
         notes.append(span(`今日排除 ${values.todayExcludedCount} 檔：缺昨收`, ''))
       }
 
-      totals.replaceChildren(
-        pair('總成本', `NT$${formatAmount(values.cost)}`, 'flat'),
-        pair('總市值', `NT$${formatAmount(values.marketValue)}`, 'flat'),
-        ...returnPairs(values, display),
-        notes,
-      )
+      const totalsParts = showCost
+        ? [
+            pair('總成本', `NT$${formatAmount(values.cost)}`, 'flat'),
+            pair('總市值', `NT$${formatAmount(values.marketValue)}`, 'flat'),
+          ]
+        : []
+      totals.replaceChildren(...totalsParts, ...returnPairs(values, display, showCost), notes)
 
       restoreFocus(focus)
     },

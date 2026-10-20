@@ -277,6 +277,26 @@
 - [x] 同步 `README.md`（結構樹）、`AGENTS.md`（`resources/` 用途）
 - [x] 驗證：`npx neu build --release` 後 bundle 內含 `favicon.ico`；執行 `dist\stock-portfolio\stock-portfolio-win_x64.exe`（工作目錄設在 `dist\stock-portfolio`）開窗正常（412×285）並正常關閉，`neutralinojs.log` 沒有新增任何 `NE_RS_UNBLDRE`（改動前每啟動一次就新增一行）
 
+## 狀態列加權指數（2026-10-20）
+
+- [x] `QuoteBatch` 加 `index: MarketIndex | null`（`price` / `previousClose` / `dataDate`），與持股報價同批取得 → `docs/adr/ADR-0019.md`
+- [x] MIS：`ex_ch` 固定附加 `tse_t00.tw`，`c === "t00"` 解析為 `index`、不混入持股報價
+- [x] Yahoo 備援：`^TWII` 與持股請求並行；指數取不到時 `index` 為 `null`，不影響持股報價與降級判定
+- [x] 狀態列最右顯示 `加權指數 46,662.77 ▽158.10 (-0.34%)`，「加權指數」標籤與「MIS 即時」同色、指數現價白色，`△` 漲／`▽` 跌／平盤不帶符號，漲跌紅漲綠跌
+- [x] `StatusBar.indexSummary()` 純函式與測試（漲、跌、平盤、缺昨收、缺現價）
+- [x] 同步 `docs/requirements.md`（F15、4.1、4.2、§5）、`docs/glossary.md`、`docs/architecture.md`（§3、§4、§5.2、§8、ADR 索引）
+- [x] `tsc --noEmit` 與 135 個測試通過
+
+## 成本欄位開關（2026-10-20）
+
+- [x] 工具列 `%` / `NT$` 按鈕左側加「成本」switch（`role="switch"`、`aria-checked`），配色與尺寸取自既有 CSS 變數與 `--scale` → `docs/adr/ADR-0020.md`
+- [x] 關閉時表格只留代號、名稱、現價、今日報酬；總計列只留今日報酬，總成本／總市值／總報酬一起隱藏
+- [x] `columnsFor(display, showCost)` 同時決定表頭、資料列、空狀態 `colspan`
+- [x] 隱藏欄位的排序鍵由 `visibleSortKey()` 改成今日報酬，方向不變
+- [x] `portfolio.json` 加 `showCost`（預設 `true`，缺欄位或非布林回預設，`schemaVersion` 維持 1）
+- [x] 同步 `docs/requirements.md`（F1、F8、F11、F12、F14、F17）、`docs/glossary.md`、`docs/architecture.md`（§3.3、§5.5、§6.1、ADR 索引）
+- [x] `tsc --noEmit` 與 140 個測試通過
+
 ## 未排入 v1
 
 CSV 匯入/匯出、i18n 多語、亮色主題與切換鈕、交易明細與已實現損益、股利與費稅、官方 EOD 校正層、券商 API、自動更新。

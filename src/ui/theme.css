@@ -76,6 +76,55 @@ html {
   color: var(--text);
 }
 
+/* F17：成本欄位開關。沿用工具列的字級與色票，開關本體用 accent 表示開啟 */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(7px * var(--scale));
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-label);
+  cursor: pointer;
+}
+
+.toggle-track {
+  position: relative;
+  width: calc(28px * var(--scale));
+  height: calc(16px * var(--scale));
+  border: 1px solid var(--line-strong);
+  border-radius: calc(8px * var(--scale));
+  background: var(--bg);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: calc(2px * var(--scale));
+  left: calc(2px * var(--scale));
+  width: calc(10px * var(--scale));
+  height: calc(10px * var(--scale));
+  border-radius: 50%;
+  background: var(--text-faint);
+  transition:
+    left 120ms ease,
+    background-color 120ms ease;
+}
+
+.toggle[aria-checked='true'] .toggle-track {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.toggle[aria-checked='true'] .toggle-thumb {
+  left: calc(14px * var(--scale));
+  background: var(--bg);
+}
+
 .ghost:disabled,
 .primary:disabled {
   opacity: 0.5;
@@ -429,6 +478,24 @@ td.actions button {
 
 .status .source {
   color: var(--text-dim);
+}
+
+/* 加權指數：與更新時間同一列，靠右 */
+.status .index {
+  display: inline-flex;
+  align-items: baseline;
+  gap: calc(7px * var(--scale));
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.status .index-label {
+  color: var(--text-dim);
+}
+
+.status .index-price {
+  color: var(--text);
 }
 
 .status .alert {

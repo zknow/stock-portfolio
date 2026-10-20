@@ -34,9 +34,18 @@ export interface SymbolEntry {
   market: Market
 }
 
+/** 發行量加權股價指數。與持股報價同批取得，不屬於任何持股 */
+export interface MarketIndex {
+  price: number | null
+  previousClose: number | null
+  /** 資料日期，YYYYMMDD */
+  dataDate: string
+}
+
 export interface QuoteBatch {
   source: QuoteSource
   quotes: Quote[]
+  index: MarketIndex | null
   fetchedAt: string
 }
 
@@ -71,6 +80,8 @@ export interface UiPreferences {
   sortKey: SortKey
   sortDirection: SortDirection
   returnDisplay: ReturnDisplay
+  /** 是否顯示成本相關欄位（股數、平均成本、總報酬） */
+  showCost: boolean
   /** 使用者縮放倍率，乘在等比縮放的因子之上 */
   zoom: number
 }

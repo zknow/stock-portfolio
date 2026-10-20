@@ -13,6 +13,7 @@ export const DEFAULT_PREFERENCES: UiPreferences = {
   sortKey: 'marketValue',
   sortDirection: 'desc',
   returnDisplay: 'rate',
+  showCost: true,
   zoom: ZOOM_DEFAULT,
 }
 
@@ -54,6 +55,11 @@ function readReturnDisplay(value: unknown): ReturnDisplay {
   return value === 'amount' || value === 'rate' ? value : DEFAULT_PREFERENCES.returnDisplay
 }
 
+/** 舊檔沒有這個欄位時顯示成本欄位（ADR-0020） */
+function readShowCost(value: unknown): boolean {
+  return typeof value === 'boolean' ? value : DEFAULT_PREFERENCES.showCost
+}
+
 /** 舊檔沒有這個欄位，非有限數值一律回預設；超出上下限的值由 `ui/scale.ts` 的 `setZoom` 夾限（ADR-0018） */
 function readZoom(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : ZOOM_DEFAULT
@@ -79,6 +85,7 @@ export function parsePortfolio(text: string): PortfolioFile {
     sortKey: readSortKey(record.sortKey),
     sortDirection: record.sortDirection === 'asc' ? 'asc' : 'desc',
     returnDisplay: readReturnDisplay(record.returnDisplay),
+    showCost: readShowCost(record.showCost),
     zoom: readZoom(record.zoom),
     holdings: holdings.filter((holding): holding is Holding => holding !== null),
   }

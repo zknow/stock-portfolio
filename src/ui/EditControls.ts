@@ -52,6 +52,7 @@ export interface EditControlsOptions {
   submit(holding: Holding): Promise<string | null>
   onModeChange(mode: EditMode): void
   onDisplayChange(display: ReturnDisplay): void
+  onCostChange(showCost: boolean): void
 }
 
 export interface EditControls {
@@ -61,6 +62,7 @@ export interface EditControls {
   form: HTMLElement
   setMode(mode: EditMode): void
   setDisplay(display: ReturnDisplay): void
+  setCost(showCost: boolean): void
   openAdd(): void
   setEnabled(enabled: boolean): void
 }
@@ -97,12 +99,26 @@ function button(text: string, className: string): HTMLButtonElement {
 export function createEditControls(options: EditControlsOptions): EditControls {
   let mode: EditMode = 'view'
   let display: ReturnDisplay = 'rate'
+  let showCost = true
   let input: AddInput = { code: '', name: '', market: 'listing', shares: '', averageCost: '' }
   /** 逃生門已展開 */
   let forcing = false
 
   const group = document.createElement('div')
   group.className = 'edit-group'
+
+  /** F17：成本欄位開關 */
+  const costToggle = button('', 'toggle')
+  costToggle.setAttribute('role', 'switch')
+  const costLabel = document.createElement('span')
+  costLabel.textContent = '成本'
+  const costTrack = document.createElement('span')
+  costTrack.className = 'toggle-track'
+  const costThumb = document.createElement('span')
+  costThumb.className = 'toggle-thumb'
+  costTrack.append(costThumb)
+  costToggle.append(costLabel, costTrack)
+  costToggle.addEventListener('click', () => options.onCostChange(!showCost))
 
   /** F6：只切換顯示，不隨 setEnabled 停用（portfolio.json 損毀時仍可切，只是不寫回） */
   const displayButton = button('', 'ghost')
@@ -115,7 +131,7 @@ export function createEditControls(options: EditControlsOptions): EditControls {
   addButton.hidden = true
   addButton.addEventListener('click', () => openAdd())
 
-  group.append(displayButton, modeButton, addButton)
+  group.append(costToggle, displayButton, modeButton, addButton)
 
   const codeInput = inputElement('add-code', '')
   const sharesInput = inputElement('add-shares', '')
@@ -299,6 +315,12 @@ export function createEditControls(options: EditControlsOptions): EditControls {
     displayButton.setAttribute('aria-label', '報酬顯示切換')
   }
 
+  function setCost(next: boolean): void {
+    showCost = next
+    costToggle.setAttribute('aria-checked', String(next))
+    costToggle.title = next ? '隱藏成本相關欄位' : '顯示成本相關欄位'
+  }
+
   function setEnabled(enabled: boolean): void {
     modeButton.disabled = !enabled
     modeButton.title = enabled ? '' : '無法讀取 portfolio.json，已停用編輯'
@@ -307,6 +329,7 @@ export function createEditControls(options: EditControlsOptions): EditControls {
 
   setMode('view')
   setDisplay('rate')
+  setCost(true)
   reset()
 
   return {
@@ -314,6 +337,7 @@ export function createEditControls(options: EditControlsOptions): EditControls {
     form,
     setMode,
     setDisplay,
+    setCost,
     openAdd,
     setEnabled,
   }

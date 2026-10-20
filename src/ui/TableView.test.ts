@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { computePnlRow } from '../domain/pnl'
 import type { PnlRow } from '../domain/pnl'
 import type { Holding, Quote } from '../domain/types'
-import { defaultDirection, columnsFor, mapSortKey, sortRows } from './TableView'
+import { defaultDirection, columnsFor, mapSortKey, sortRows, visibleSortKey } from './TableView'
 
 function row(code: string, price: number | null, previousClose: number | null): PnlRow {
   const holding: Holding = { code, name: `名${code}`, market: 'listing', shares: 1000, averageCost: 100 }
@@ -75,6 +75,33 @@ describe('columnsFor', () => {
   it('欄頭文字跟著模式變', () => {
     expect(columnsFor('rate').at(-1)?.label).toBe('今日報酬率')
     expect(columnsFor('amount').at(-1)?.label).toBe('今日報酬金額')
+  })
+
+  it('關閉成本時只留代號、名稱、現價、今日報酬', () => {
+    const keys = (display: 'rate' | 'amount'): string[] =>
+      columnsFor(display, false).map((column) => column.key)
+
+    expect(keys('rate')).toEqual(['code', 'name', 'price', 'todayReturnRate'])
+    expect(keys('amount')).toEqual(['code', 'name', 'price', 'todayReturn'])
+  })
+})
+
+describe('visibleSortKey', () => {
+  it('開啟成本時原樣保留', () => {
+    expect(visibleSortKey('shares', 'rate', true)).toBe('shares')
+    expect(visibleSortKey('totalReturnRate', 'rate', true)).toBe('totalReturnRate')
+  })
+
+  it('關閉成本時被隱藏的排序鍵改用今日報酬，方向由呼叫端保留', () => {
+    expect(visibleSortKey('shares', 'rate', false)).toBe('todayReturnRate')
+    expect(visibleSortKey('averageCost', 'amount', false)).toBe('todayReturn')
+    expect(visibleSortKey('marketValue', 'rate', false)).toBe('todayReturnRate')
+  })
+
+  it('關閉成本時可見的排序鍵不變', () => {
+    expect(visibleSortKey('code', 'rate', false)).toBe('code')
+    expect(visibleSortKey('price', 'amount', false)).toBe('price')
+    expect(visibleSortKey('todayReturn', 'rate', false)).toBe('todayReturn')
   })
 })
 
