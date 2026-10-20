@@ -142,7 +142,7 @@ function setDisplay(display: ReturnDisplay): void {
   scheduleSave()
 }
 
-/** F17：成本欄位開關。目前排序鍵落在被隱藏的欄位時改用今日報酬 */
+/** F17：成本欄位顯示。目前排序鍵落在被隱藏的欄位時改用今日報酬 */
 function setCostVisibility(showCost: boolean): void {
   portfolio = {
     ...portfolio,

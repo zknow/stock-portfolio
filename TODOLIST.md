@@ -297,6 +297,14 @@
 - [x] 同步 `docs/requirements.md`（F1、F8、F11、F12、F14、F17）、`docs/glossary.md`、`docs/architecture.md`（§3.3、§5.5、§6.1、ADR 索引）
 - [x] `tsc --noEmit` 與 140 個測試通過
 
+## 工具列顯示面板與圖示動作（2026-10-20）
+
+- [x] 成本與報酬單位收進工具列「顯示」彈出面板；按鈕帶下箭頭、展開時轉上；兩個控制項都是左右分割選項，面板外點擊或 Esc 關閉 → `docs/adr/ADR-0021.md`
+- [x] 面板標籤欄固定 `30px × --scale`、選項欄 `86px × --scale`、欄距 `8px × --scale`，兩個選項控制項同寬對齊
+- [x] 編輯／完成與新增改成鉛筆／勾號／加號 SVG 圖示鈕，保留 `title` 與 `aria-label`；新增仍只在編輯模式出現
+- [x] 同步 `docs/requirements.md`（F1、F6、F8、F11、F12、F13、F14、F17）、`docs/glossary.md`、`docs/architecture.md`（§3.3、§5.3–5.5、ADR 索引）、`README.md`
+- [x] `tsc --noEmit`、`vite build` 與 140 個測試通過
+
 ## 未排入 v1
 
 CSV 匯入/匯出、i18n 多語、亮色主題與切換鈕、交易明細與已實現損益、股利與費稅、官方 EOD 校正層、券商 API、自動更新。

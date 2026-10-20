@@ -12,6 +12,7 @@
   --line: #243135;
   --line-strong: #32454a;
   --hover: rgba(255, 255, 255, 0.035);
+  --shadow: rgba(0, 0, 0, 0.45);
 
   --text: #e4edef;
   --text-dim: #8fa5ac;
@@ -76,53 +77,131 @@ html {
   color: var(--text);
 }
 
-/* F17：成本欄位開關。沿用工具列的字級與色票，開關本體用 accent 表示開啟 */
-.toggle {
+/* F6 / F17：顯示面板。面板只放兩個左右分割選項，標籤與控制項固定寬度並左右對齊 */
+.display-menu {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.display-trigger {
   display: inline-flex;
   align-items: center;
-  gap: calc(7px * var(--scale));
-  padding: 0;
+  gap: calc(5px * var(--scale));
+}
+
+.display-chevron {
+  width: calc(10px * var(--scale));
+  height: calc(10px * var(--scale));
+  transition: transform 120ms ease;
+}
+
+.display-trigger[aria-expanded='true'] .display-chevron {
+  transform: rotate(180deg);
+}
+
+.display-trigger[aria-expanded='true'] {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.display-panel {
+  position: absolute;
+  top: calc(100% + calc(12px * var(--scale)));
+  right: 0;
+  z-index: 4;
+  padding: calc(8px * var(--scale)) calc(9px * var(--scale));
+  border: 1px solid var(--line-strong);
+  border-radius: calc(6px * var(--scale));
+  background: var(--surface);
+  box-shadow: 0 12px 34px var(--shadow);
+}
+
+.display-grid {
+  display: grid;
+  grid-template-columns: calc(30px * var(--scale)) calc(86px * var(--scale));
+  column-gap: calc(8px * var(--scale));
+  row-gap: calc(7px * var(--scale));
+  align-items: center;
+}
+
+.display-label {
+  color: var(--text-dim);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+
+.segmented {
+  display: inline-flex;
+  width: calc(86px * var(--scale));
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: calc(4px * var(--scale));
+}
+
+.segmented-option {
+  flex: 1;
+  min-width: 0;
+  padding: calc(3px * var(--scale)) 0;
   border: 0;
   background: none;
-  color: var(--text-dim);
+  color: var(--text-faint);
   font: inherit;
   font-size: var(--fs-label);
+  line-height: 1.45;
+  text-align: center;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.toggle-track {
-  position: relative;
+.segmented-option:hover {
+  color: var(--text);
+}
+
+.segmented-option[aria-pressed='true'] {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: calc(28px * var(--scale));
-  height: calc(16px * var(--scale));
+  height: calc(26px * var(--scale));
+  padding: 0;
   border: 1px solid var(--line-strong);
-  border-radius: calc(8px * var(--scale));
-  background: var(--bg);
-  transition:
-    background-color 120ms ease,
-    border-color 120ms ease;
+  border-radius: calc(4px * var(--scale));
+  background: none;
+  color: var(--text-dim);
+  cursor: pointer;
 }
 
-.toggle-thumb {
-  position: absolute;
-  top: calc(2px * var(--scale));
-  left: calc(2px * var(--scale));
-  width: calc(10px * var(--scale));
-  height: calc(10px * var(--scale));
-  border-radius: 50%;
-  background: var(--text-faint);
-  transition:
-    left 120ms ease,
-    background-color 120ms ease;
-}
-
-.toggle[aria-checked='true'] .toggle-track {
+.icon-button:hover:not(:disabled) {
   border-color: var(--accent);
-  background: var(--accent);
+  color: var(--text);
 }
 
-.toggle[aria-checked='true'] .toggle-thumb {
-  left: calc(14px * var(--scale));
-  background: var(--bg);
+.icon-button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.icon-button-primary {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.icon-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.icon-button .icon {
+  width: calc(14px * var(--scale));
+  height: calc(14px * var(--scale));
 }
 
 .ghost:disabled,

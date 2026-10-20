@@ -122,7 +122,7 @@ stock-portfolio/
 | `docs/requirements.md` | 功能規格：每個功能的規則、驗證、邊界 |
 | `docs/architecture.md` | 分層、模組職責、資料流、檔案格式、ADR 索引 |
 | `docs/glossary.md` | 領域詞彙的單一定義來源 |
-| `docs/adr/` | 十八篇技術決策紀錄（含理由與替代方案） |
+| `docs/adr/` | 技術決策紀錄（含理由與替代方案） |
 | `AGENTS.md` | 專案操作規則 |
 | `TODOLIST.md` | 實作順序與進度 |
 

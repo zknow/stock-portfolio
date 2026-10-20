@@ -56,7 +56,7 @@ export interface EditControlsOptions {
 }
 
 export interface EditControls {
-  /** 工具列上的控制項：報酬顯示切換鈕、模式切換鈕與新增鈕 */
+  /** 工具列上的控制項：顯示面板、編輯鈕與新增鈕 */
   toolbar: HTMLElement
   /** 新增表單，由呼叫端插入版面 */
   form: HTMLElement
@@ -96,6 +96,45 @@ function button(text: string, className: string): HTMLButtonElement {
   return element
 }
 
+type IconName = 'pencil' | 'check' | 'plus' | 'chevron'
+
+function icon(name: IconName): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('viewBox', '0 0 16 16')
+  svg.setAttribute('fill', 'none')
+  svg.setAttribute('stroke', 'currentColor')
+  svg.setAttribute('stroke-width', name === 'pencil' || name === 'chevron' ? '1.4' : '1.6')
+  svg.setAttribute('stroke-linecap', 'round')
+  svg.setAttribute('stroke-linejoin', 'round')
+  svg.setAttribute('aria-hidden', 'true')
+  svg.classList.add('icon')
+
+  const path = (d: string): SVGPathElement => {
+    const element = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    element.setAttribute('d', d)
+    return element
+  }
+
+  if (name === 'pencil') {
+    svg.append(path('M3 13l1-3 7-7 2 2-7 7-3 1z'), path('M9.5 4.5l2 2'))
+  } else if (name === 'check') {
+    svg.append(path('M3.5 8.5l3 3 6-6'))
+  } else if (name === 'plus') {
+    svg.append(path('M8 3.5v9M3.5 8h9'))
+  } else {
+    svg.append(path('M4 6.5l4 4 4-4'))
+  }
+  return svg
+}
+
+function iconButton(label: string, name: IconName): HTMLButtonElement {
+  const element = button('', 'icon-button')
+  element.append(icon(name))
+  element.title = label
+  element.setAttribute('aria-label', label)
+  return element
+}
+
 export function createEditControls(options: EditControlsOptions): EditControls {
   let mode: EditMode = 'view'
   let display: ReturnDisplay = 'rate'
@@ -107,31 +146,112 @@ export function createEditControls(options: EditControlsOptions): EditControls {
   const group = document.createElement('div')
   group.className = 'edit-group'
 
-  /** F17：成本欄位開關 */
-  const costToggle = button('', 'toggle')
-  costToggle.setAttribute('role', 'switch')
+  /** F6 / F17：成本與報酬單位共用一個「顯示」面板 */
+  const displayMenu = document.createElement('div')
+  displayMenu.className = 'display-menu'
+
+  const displayTrigger = button('顯示', 'ghost display-trigger')
+  displayTrigger.setAttribute('aria-expanded', 'false')
+  displayTrigger.title = '顯示設定'
+  const displayChevron = icon('chevron')
+  displayChevron.classList.add('display-chevron')
+  displayTrigger.append(displayChevron)
+
+  const displayPanel = document.createElement('div')
+  displayPanel.className = 'display-panel'
+  displayPanel.hidden = true
+
+  const costShow = button('顯示', 'segmented-option')
+  const costHide = button('隱藏', 'segmented-option')
+  const costOptions = new Map<boolean, HTMLButtonElement>([
+    [true, costShow],
+    [false, costHide],
+  ])
+  const costControl = document.createElement('div')
+  costControl.className = 'segmented'
+  costControl.setAttribute('role', 'group')
+  costControl.setAttribute('aria-label', '成本欄位')
+  costControl.append(costShow, costHide)
+
+  const rateOption = button('%', 'segmented-option')
+  const amountOption = button('NT$', 'segmented-option')
+  const displayOptions = new Map<ReturnDisplay, HTMLButtonElement>([
+    ['rate', rateOption],
+    ['amount', amountOption],
+  ])
+  const unitControl = document.createElement('div')
+  unitControl.className = 'segmented'
+  unitControl.setAttribute('role', 'group')
+  unitControl.setAttribute('aria-label', '報酬單位')
+  unitControl.append(rateOption, amountOption)
+
   const costLabel = document.createElement('span')
+  costLabel.className = 'display-label'
   costLabel.textContent = '成本'
-  const costTrack = document.createElement('span')
-  costTrack.className = 'toggle-track'
-  const costThumb = document.createElement('span')
-  costThumb.className = 'toggle-thumb'
-  costTrack.append(costThumb)
-  costToggle.append(costLabel, costTrack)
-  costToggle.addEventListener('click', () => options.onCostChange(!showCost))
+  const unitLabel = document.createElement('span')
+  unitLabel.className = 'display-label'
+  unitLabel.textContent = '單位'
 
-  /** F6：只切換顯示，不隨 setEnabled 停用（portfolio.json 損毀時仍可切，只是不寫回） */
-  const displayButton = button('', 'ghost')
-  displayButton.addEventListener('click', () => options.onDisplayChange(display === 'rate' ? 'amount' : 'rate'))
+  const displayGrid = document.createElement('div')
+  displayGrid.className = 'display-grid'
+  displayGrid.append(costLabel, costControl, unitLabel, unitControl)
+  displayPanel.append(displayGrid)
+  displayMenu.append(displayTrigger, displayPanel)
 
-  const modeButton = button('', 'ghost')
+  costShow.addEventListener('click', () => {
+    if (!showCost) options.onCostChange(true)
+  })
+  costHide.addEventListener('click', () => {
+    if (showCost) options.onCostChange(false)
+  })
+  rateOption.addEventListener('click', () => {
+    if (display !== 'rate') options.onDisplayChange('rate')
+  })
+  amountOption.addEventListener('click', () => {
+    if (display !== 'amount') options.onDisplayChange('amount')
+  })
+
+  function closeDisplay(): void {
+    if (displayPanel.hidden) return
+    displayPanel.hidden = true
+    displayTrigger.setAttribute('aria-expanded', 'false')
+    document.removeEventListener('pointerdown', onDocumentPointerDown)
+    document.removeEventListener('keydown', onDocumentKeyDown)
+  }
+
+  function openDisplay(): void {
+    if (!displayPanel.hidden) return
+    displayPanel.hidden = false
+    displayTrigger.setAttribute('aria-expanded', 'true')
+    document.addEventListener('pointerdown', onDocumentPointerDown)
+    document.addEventListener('keydown', onDocumentKeyDown)
+  }
+
+  function onDocumentPointerDown(event: PointerEvent): void {
+    if (event.target instanceof Node && !displayMenu.contains(event.target)) closeDisplay()
+  }
+
+  function onDocumentKeyDown(event: KeyboardEvent): void {
+    if (event.key !== 'Escape') return
+    closeDisplay()
+    displayTrigger.focus()
+  }
+
+  displayTrigger.addEventListener('click', () => {
+    if (displayPanel.hidden) openDisplay()
+    else closeDisplay()
+  })
+
+  const modeButton = iconButton('編輯', 'pencil')
+  modeButton.setAttribute('aria-pressed', 'false')
   modeButton.addEventListener('click', () => options.onModeChange(mode === 'view' ? 'edit' : 'view'))
 
-  const addButton = button('新增股票', 'primary')
+  const addButton = iconButton('新增股票', 'plus')
+  addButton.classList.add('icon-button-primary')
   addButton.hidden = true
   addButton.addEventListener('click', () => openAdd())
 
-  group.append(costToggle, displayButton, modeButton, addButton)
+  group.append(displayMenu, modeButton, addButton)
 
   const codeInput = inputElement('add-code', '')
   const sharesInput = inputElement('add-shares', '')
@@ -302,29 +422,38 @@ export function createEditControls(options: EditControlsOptions): EditControls {
 
   function setMode(next: EditMode): void {
     mode = next
-    modeButton.textContent = next === 'edit' ? '完成' : '編輯'
+    const label = next === 'edit' ? '完成' : '編輯'
+    modeButton.replaceChildren(icon(next === 'edit' ? 'check' : 'pencil'))
+    modeButton.title = label
+    modeButton.setAttribute('aria-label', label)
     modeButton.setAttribute('aria-pressed', String(next === 'edit'))
     addButton.hidden = next !== 'edit'
+    closeDisplay()
     if (next === 'view') closeAdd()
   }
 
   function setDisplay(next: ReturnDisplay): void {
     display = next
-    displayButton.textContent = next === 'rate' ? '%' : 'NT$'
-    displayButton.title = next === 'rate' ? '目前顯示百分比，點擊改為金額' : '目前顯示金額，點擊改為百分比'
-    displayButton.setAttribute('aria-label', '報酬顯示切換')
+    for (const [value, option] of displayOptions) {
+      option.setAttribute('aria-pressed', String(value === next))
+    }
   }
 
   function setCost(next: boolean): void {
     showCost = next
-    costToggle.setAttribute('aria-checked', String(next))
-    costToggle.title = next ? '隱藏成本相關欄位' : '顯示成本相關欄位'
+    for (const [value, option] of costOptions) {
+      option.setAttribute('aria-pressed', String(value === next))
+    }
   }
 
   function setEnabled(enabled: boolean): void {
-    modeButton.disabled = !enabled
-    modeButton.title = enabled ? '' : '無法讀取 portfolio.json，已停用編輯'
     if (!enabled) setMode('view')
+    modeButton.disabled = !enabled
+    modeButton.title = enabled
+      ? mode === 'edit'
+        ? '完成'
+        : '編輯'
+      : '無法讀取 portfolio.json，已停用編輯'
   }
 
   setMode('view')

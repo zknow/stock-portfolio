@@ -356,7 +356,7 @@ export function createTableView(host: HTMLElement, handlers: TableHandlers): Tab
   let shownDisplay: ReturnDisplay | null = null
   let shownShowCost: boolean | null = null
 
-  /** 欄數與欄頭文字都跟著顯示模式與成本開關走，只在切換時重建（ADR-0015、ADR-0020） */
+  /** 欄數與欄頭文字都跟著顯示模式與成本顯示選項走，只在切換時重建（ADR-0015、ADR-0020、ADR-0021） */
   function buildHead(display: ReturnDisplay, showCost: boolean): void {
     shownDisplay = display
     shownShowCost = showCost
