@@ -20,7 +20,7 @@
 1. 解壓 `stock-portfolio-release.zip`
 2. 雙擊 `stock-portfolio-win_x64.exe`
 
-資料會存在 exe 旁邊的 `config/`。
+資料會存在 `%APPDATA%\stock-portfolio\`。
 
 ### 從原始碼執行
 
@@ -31,7 +31,7 @@ npm install
 npx neu run
 ```
 
-`neu run` 會自己帶起 Vite，不用先開 `npm run dev`。框架執行檔已附在 `bin/`，不用另外下載。
+`neu run` 會自己帶起 Vite，不用先開 `npm run dev`。框架執行檔 `bin/neutralino-win_x64.exe` 不納入版控，`start.bat` 與 `release.bat` 找不到時會依 `neutralino.config.json` 的 `binaryVersion` 自動下載（見 [ADR-0022](docs/adr/ADR-0022.md)）。
 
 ## 第一次使用
 
@@ -61,12 +61,13 @@ npx neu run
 
 ## 資料位置與備份
 
-| 檔案 | 內容 |
-|---|---|
-| `config/portfolio.json` | 持股與介面偏好。複製這個檔就是備份 |
-| `config/symbols.json` | 代號對照表快取，刪掉會自己重建 |
+| 檔案 | 內容 | 版控 |
+|---|---|---|
+| `%APPDATA%\stock-portfolio\portfolio.json` | 持股與介面偏好。複製這個檔就是備份 | 不納入 |
+| `%APPDATA%\stock-portfolio\symbols.json` | 代號對照表快取，刪掉會自己重建 | 不納入 |
+| `logs/app.log` | 異常與狀態轉換紀錄，用於排查 | 不納入 |
 
-兩個檔都在首次執行時自動產生，不納入版控。
+以上檔案都在首次執行時自動產生。舊版放在 `config/` 的檔案會在首次執行時複製到上述位置，原檔保留（ADR-0029）。
 
 打包後的 exe 以行程的工作目錄解析相對路徑：解壓後直接雙擊，資料就在 exe 旁邊；從其他目錄啟動時，資料會寫到那個目錄。
 
@@ -101,7 +102,8 @@ npx neu build --release     # 打包到 dist/stock-portfolio/
 |---|---|
 | `scripts\start.bat` | 啟動桌面應用程式；加 `inspector` 參數附開發者工具；關掉 app 會一併收掉 `neu run` 與 Vite |
 | `scripts\release.bat` | 打包 Windows 執行檔 |
-| `scripts\kill.bat` | 清除殘留的專案程序（程式關不掉時用） |
+| `scripts\prepare.bat` | 檢查 `bin\neutralino-win_x64.exe`，不存在時依 `binaryVersion` 下載；檢查 `node_modules\`，不存在時執行 `npm install`。`start.bat` 與 `release.bat` 會自動呼叫 |
+| `scripts\kill.bat` | 清除殘留的專案程序；`start.bat` 啟動前後自動呼叫，也可手動執行 |
 
 `start.bat` 與 `release.bat` 找不到 `node_modules\` 時會自己執行 `npm install`。
 
@@ -109,10 +111,11 @@ npx neu build --release     # 打包到 dist/stock-portfolio/
 
 ```
 stock-portfolio/
-├── bin/         # Neutralino 框架執行檔（neu run 需要，納入版控）
+├── bin/         # Neutralino 框架執行檔（neu run 需要，由 prepare.bat 自動下載，不納入版控）
 ├── build/       # Vite 產出（不納入版控）
 ├── dist/        # 打包產出（不納入版控）
-├── config/      # 執行期設定（首次執行產生，不納入版控）
+├── config/      # 舊版資料，僅供首次啟動遷移（ADR-0029）
+├── logs/        # app.log（首次執行產生，不納入版控）
 ├── docs/        # 規格、架構、詞彙、ADR
 ├── resources/   # 圖示、favicon、字型（Vite 的 publicDir）
 ├── scripts/     # start / release / kill

@@ -66,8 +66,8 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 | `quote/QuoteService.ts` | 交易時段判斷、輪詢排程、失敗計數、降級、回試、狀態廣播 |
 | `quote/MisProvider.ts` | 組 `ex_ch` 批次字串（固定附加 `tse_t00.tw`）、呼叫 MIS、解析回應、現價解析順序（`trade.z` → `z` → 當日無成交）、壞代號判定（`c === ""`）、正規化為 `Quote` 與 `MarketIndex` |
 | `quote/YahooProvider.ts` | 代號轉 `.TW` / `.TWO`、解析 `v8/chart`、正規化為 `Quote`；另以 `^TWII` 取得加權指數 |
-| `symbolTable.ts` | 抓取並合併兩個官方端點、讀寫 `config/symbols.json`、代號查詢 |
-| `storage.ts` | 讀寫 `config/portfolio.json`、`schemaVersion` 遷移 |
+| `symbolTable.ts` | 抓取並合併兩個官方端點、讀寫 `%APPDATA%\stock-portfolio\symbols.json`、代號查詢 |
+| `storage.ts` | 讀寫 `%APPDATA%\stock-portfolio\portfolio.json`、首次啟動從 `config/` 複製舊檔（ADR-0029）、`schemaVersion` 遷移 |
 | `logger.ts` | 寫入 `logs/app.log`，只記異常與狀態轉換 |
 
 ### 3.3 ui
@@ -125,13 +125,13 @@ export interface QuoteProvider {
 
 ```
 main.ts
-  → storage.load()                    讀 config/portfolio.json
+  → storage.load()                    讀 %APPDATA%\stock-portfolio\portfolio.json
   → symbolTable.ensureFresh()         非當日則抓兩個官方端點
   → ui 建立（套用排序、縮放倍率、視窗尺寸貼合內容、主題）
   → QuoteService.start()
         若在交易時段 → 立即抓一次，之後每 5 秒
         若不在      → 抓一次即停，狀態列顯示「已收盤 / 非交易時段」
-                      首抓沒取得全部持股的報價時，延遲 5 秒重試一次（ADR-0014）
+                      首抓沒取得全部持股的報價時，每 5 秒重試，最多 6 次（ADR-0028）
 ```
 
 ### 5.2 輪詢循環
@@ -191,7 +191,7 @@ main.ts
 
 ## 6. 檔案格式
 
-### 6.1 `config/portfolio.json`
+### 6.1 `portfolio.json`
 
 ```json
 {
@@ -212,7 +212,7 @@ main.ts
 
 視窗尺寸**不存放於此檔**：啟動時與內容變動時一律把視窗調到貼合內容（ADR-0016）。舊檔殘留的 `windowWidth` / `windowHeight` 直接忽略，不升 `schemaVersion`。
 
-### 6.2 `config/symbols.json`
+### 6.2 `symbols.json`
 
 ```json
 {
@@ -282,13 +282,14 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 
 - 不設 `cli.clientLibrary`，改由 npm 安裝 `@neutralinojs/lib`，避免 CLI 從 GitHub Releases 取客戶端程式庫
 - 搭配 `modes.window.injectGlobals: true`，框架會直接注入全域變數，因此**不需要** `frontendLibrary.patchFile`（`patchFile` 是給不使用 `injectGlobals` 的專案用的）
-- Vite 的 `publicDir` 設為 `resources`，因此 `resources/**` 會原樣複製到 `build/`。視窗圖示路徑因此是 `/build/icons/appIcon.png`
+- Vite 的 `publicDir` 設為 `resources`，因此 `resources/**` 會原樣複製到 `build/`。視窗圖示路徑因此是 `/build/appIcon.png`
 - `neu run` 會執行 `devCommand`、等待 `devUrl` 的埠就開、再啟動應用程式並帶上 `--url`。Vite 的 `strictPort: true` 是必要的，否則埠被占用時會換埠而 CLI 等不到
 
 ### 7.3 檔案系統
 
-- `dataLocation: "app"`（預設）：資料留在應用程式目錄，符合 ADR-0004
-- 打包後的 exe 以**行程的工作目錄**解析 `config/`、`logs/` 這類相對路徑。雙擊執行時工作目錄等於 exe 所在目錄；用 `Start-Process` 未指定 `-WorkingDirectory` 時，資料會落在呼叫端目錄。`dist/stock-portfolio/neutralinojs.log` 由框架自己寫，與 `logs/app.log` 無關
+- `dataLocation: "app"`（預設）：本專案不使用框架的資料目錄，持股與對照表改存 `%APPDATA%\stock-portfolio\`（ADR-0029）
+- 打包後的 exe 以**行程的工作目錄**解析 `logs/` 相對路徑。雙擊執行時工作目錄等於 exe 所在目錄；用 `Start-Process` 未指定 `-WorkingDirectory` 時，`logs/` 會落在呼叫端目錄
+- 框架日誌已關閉（`logging.writeToLogFile: false`，ADR-0023），不產生 `neutralinojs.log`
 - `filesystemScopes` **必須留空或省略**。v6.10.0 新增此限制，設定後範圍外的檔案存取會以 `NE_FS_SCOPERR` 失敗
 - `filesystem.createDirectory` 自 v5.0.0 起支援遞迴建目錄；`writeFile` **不保證**自動建立父目錄，寫入前一律先呼叫 `createDirectory`
 - **`createDirectory` 在目錄已存在時會回報 `NE_FS_DIRCRER`**（實測）。因此呼叫端必須把這個錯誤碼視為成功，否則第二次啟動就會失敗。`storage.ts` 與 `logger.ts` 都必須處理
@@ -343,7 +344,7 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | `portfolio.json` 損毀 | 拒絕覆寫，log 記錄，UI 顯示錯誤並保留原檔 |
 | `symbols.json` 過期且更新失敗 | 沿用舊快取，log 記錄，不阻擋啟動 |
 | 加權指數取不到 | `QuoteBatch.index` 為 `null`，狀態列不顯示指數，不影響持股報價與降級判定 |
-| 非交易日啟動 | 抓一次即停，狀態列顯示「非交易時段」；首抓沒取得報價則延遲 5 秒重試一次（ADR-0014） |
+| 非交易日啟動 | 抽一次即停，狀態列顯示「非交易時段」；首抽沒取得報價則每 5 秒重試，最多 6 次（ADR-0028） |
 
 ## 9. ADR 索引
 
@@ -352,7 +353,7 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0001](adr/ADR-0001.md) | 報價來源採 MIS，Yahoo 為備援 |
 | [ADR-0002](adr/ADR-0002.md) | 庫存模型只存平均單位成本 |
 | [ADR-0003](adr/ADR-0003.md) | 報酬率公式（未實現、不含費稅股利） |
-| [ADR-0004](adr/ADR-0004.md) | 儲存於 `config/` 下的單一 JSON |
+| [ADR-0004](adr/ADR-0004.md) | 儲存於 `config/` 下的單一 JSON（儲存位置由 ADR-0029 取代） |
 | [ADR-0005](adr/ADR-0005.md) | TypeScript + Vite，不引入框架 |
 | [ADR-0006](adr/ADR-0006.md) | 縮放改用內容等比 |
 | [ADR-0007](adr/ADR-0007.md) | 固定深色主題，紅漲綠跌 |
@@ -370,3 +371,11 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0019](adr/ADR-0019.md) | 加權指數隨持股報價同批取得，顯示於狀態列右側 |
 | [ADR-0020](adr/ADR-0020.md) | 成本欄位以工具列開關整組隱藏，狀態寫入 UI 偏好（控制項形式由 ADR-0021 取代） |
 | [ADR-0021](adr/ADR-0021.md) | 顯示設定收進工具列面板，成本與單位採左右分割選項，編輯與新增改圖示鈕 |
+| [ADR-0022](adr/ADR-0022.md) | 框架執行檔不納入版控，由 `scripts\ensure-bin.bat` 依 `binaryVersion` 自動下載 |
+| [ADR-0023](adr/ADR-0023.md) | 關閉框架的檔案日誌，`logs/` 只保留 `app.log` |
+| [ADR-0024](adr/ADR-0024.md) | 圖示移到 `resources/` 根目錄，下載暫存改用 `bin\`（取代 ADR-0010 與 ADR-0022 的對應決策） |
+| [ADR-0025](adr/ADR-0025.md) | `ensure-bin.bat` 改為 `prepare.bat`，並合併 `node_modules` 檢查；release 改直接呼叫本地 CLI |
+| [ADR-0026](adr/ADR-0026.md) | `neu run` 在 Job Object 中執行，程序樹隨 `start.bat` 的 PowerShell 程序結束而收掉（檔案位置由 ADR-0027 取代） |
+| [ADR-0027](adr/ADR-0027.md) | Job Object 啟動程式內嵌於 `start.bat`，不再使用 `run-app.ps1` |
+| [ADR-0028](adr/ADR-0028.md) | 非交易時段首抓沒取得報價時改為最多 6 次重試（取代 ADR-0014 的一次重試） |
+| [ADR-0029](adr/ADR-0029.md) | 持股與對照表改存 `%APPDATA%\stock-portfolio\`，首次啟動從 `config/` 複製 |

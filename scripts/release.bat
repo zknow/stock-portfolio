@@ -1,36 +1,22 @@
 @echo off
 setlocal
 
-rem 本檔以 ANSI（CP950 / Big5）儲存，cmd 才讀得懂中文；不要存成 UTF-8、不要加 chcp
-rem 雙擊時的工作目錄不一定是專案根目錄，一律切到專案根目錄（這支腳本在 scripts\）
+rem Keep this file ASCII-only: cmd misparses non-ASCII text in batch files.
+rem Double-click may start in another directory, so always cd to the project root (this script is in scripts\).
 cd /d "%~dp0.."
+call "%~dp0prepare.bat"
+if errorlevel 1 pause & exit /b 1
 
-if not exist "node_modules\" (
-  echo 找不到 node_modules，先執行 npm install...
-  echo.
-  call npm install
-  if errorlevel 1 (
-    echo.
-    echo [錯誤] npm install 失敗，請確認 Node.js 與網路。
-    pause
-    exit /b 1
-  )
-  echo.
-)
-
-echo 打包 Windows 執行檔（release）...
+echo Building Windows executable (release)...
 echo.
-call npx neu build --release
+node "node_modules\@neutralinojs\neu\bin\neu.js" build --release
 if errorlevel 1 (
   echo.
-  echo [錯誤] 打包失敗，請看上方訊息。
+  echo [ERROR] Build failed. See the messages above.
   pause
   exit /b 1
 )
 
 echo.
-echo 打包完成，產物在：
-echo   dist\stock-portfolio\stock-portfolio-win_x64.exe
-echo   dist\stock-portfolio\resources.neu
-echo   dist\stock-portfolio-release.zip
+echo Build complete. Output is in dist\.
 pause

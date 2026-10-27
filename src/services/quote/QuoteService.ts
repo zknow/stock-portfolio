@@ -9,8 +9,9 @@ import { yahooProvider } from './YahooProvider'
 export const POLL_INTERVAL_MS = 5000
 export const FAIL_THRESHOLD = 3
 export const RETRY_INTERVAL_MS = 5 * 60 * 1000
-/** 非交易時段首抓沒取得報價時的延遲重試間隔 */
+/** 非交易時段首抓沒取得報價時的延遲重試間隔與次數上限 */
 export const STARTUP_RETRY_MS = 5000
+export const STARTUP_RETRY_LIMIT = 6
 
 export interface SourceState {
   /** 降級中，使用 Yahoo */
@@ -92,6 +93,7 @@ export function createQuoteService(onUpdate: (update: QuoteUpdate) => void): Quo
   let running = false
   let catchUpDone = true
   let inFlight = false
+  let startupRetries = 0
   let timer: number | null = null
 
   function currentStatus(): QuoteStatus {
@@ -153,15 +155,27 @@ export function createQuoteService(onUpdate: (update: QuoteUpdate) => void): Quo
     }
   }
 
-  /** 首抓沒取得報價時就沒有下一次了（非交易時段停止輪詢），延遲重試一次 */
+  /** 首抓沒取得報價時就沒有下一次了（非交易時段停止輪詢），需延遲重試 */
   function startupNeedsRetry(): boolean {
     if (targets.length === 0) return false
     return codesWithoutQuote(targets, batch?.quotes ?? []).length > 0
   }
 
+  async function scheduleStartupRetry(): Promise<void> {
+    startupRetries += 1
+    await log('WARN', 'quote.retry', `首抓未取得報價，${STARTUP_RETRY_MS / 1000} 秒後第 ${startupRetries} 次重試`)
+    timer = window.setTimeout(() => void retryStartup(), STARTUP_RETRY_MS)
+  }
+
   async function retryStartup(): Promise<void> {
     if (!running) return
     await pollOnce()
+    if (!running || !startupNeedsRetry()) return
+    if (startupRetries < STARTUP_RETRY_LIMIT) {
+      await scheduleStartupRetry()
+    } else {
+      await log('WARN', 'quote.retry', `已重試 ${STARTUP_RETRY_LIMIT} 次仍未取得報價，停止重試`)
+    }
   }
 
   async function tick(): Promise<void> {
@@ -197,10 +211,7 @@ export function createQuoteService(onUpdate: (update: QuoteUpdate) => void): Quo
       } else {
         phase = 'stopped'
         emit()
-        if (startupNeedsRetry()) {
-          await log('WARN', 'quote.retry', `首抓未取得報價，${STARTUP_RETRY_MS / 1000} 秒後重試一次`)
-          timer = window.setTimeout(() => void retryStartup(), STARTUP_RETRY_MS)
-        }
+        if (startupNeedsRetry()) await scheduleStartupRetry()
       }
     },
 

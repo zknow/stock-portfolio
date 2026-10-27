@@ -5,9 +5,9 @@ import { dateText } from './clock'
 import { ensureDirectory } from './fsutil'
 import { getText } from './http'
 import { log } from './logger'
-import { CONFIG_DIR } from './storage'
+import { dataDir, dataFile } from './storage'
 
-export const SYMBOL_PATH = 'config/symbols.json'
+export const SYMBOL_FILE = 'symbols.json'
 export const TWSE_URL = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL'
 export const TPEX_URL = 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes'
 
@@ -98,13 +98,13 @@ export function lookup(table: SymbolTable, code: string): SymbolEntry | undefine
 }
 
 export async function save(table: SymbolTable): Promise<void> {
-  await ensureDirectory(CONFIG_DIR)
-  await filesystem.writeFile(SYMBOL_PATH, `${JSON.stringify(table, null, 2)}\n`)
+  await ensureDirectory(await dataDir())
+  await filesystem.writeFile(await dataFile(SYMBOL_FILE), `${JSON.stringify(table, null, 2)}\n`)
 }
 
 async function read(): Promise<SymbolTable | null> {
   try {
-    return parseTable(await filesystem.readFile(SYMBOL_PATH))
+    return parseTable(await filesystem.readFile(await dataFile(SYMBOL_FILE)))
   } catch {
     return null
   }

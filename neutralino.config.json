@@ -7,6 +7,9 @@
   "enableServer": true,
   "enableNativeAPI": true,
   "dataLocation": "app",
+  "logging": {
+    "writeToLogFile": false
+  },
   "nativeAllowList": [
     "app.*",
     "window.*",
@@ -25,7 +28,7 @@
       "center": true,
       "useSavedState": false,
       "injectGlobals": true,
-      "icon": "/build/icons/appIcon.png"
+      "icon": "/build/appIcon.png"
     }
   },
   "cli": {

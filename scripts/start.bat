@@ -1,58 +1,109 @@
 @echo off
 setlocal
 
-rem 本檔以 ANSI（CP950 / Big5）儲存，cmd 才讀得懂中文；不要存成 UTF-8、不要加 chcp
-rem 雙擊時的工作目錄不一定是專案根目錄，一律切到專案根目錄（這支腳本在 scripts\）
+rem Keep this file ASCII-only: cmd misparses non-ASCII text in batch files.
+rem Double-click may start in another directory, so always cd to the project root (this script is in scripts\).
 cd /d "%~dp0.."
+call "%~dp0prepare.bat"
+if errorlevel 1 pause & exit /b 1
 
-if not exist "node_modules\" (
-  echo 找不到 node_modules，先執行 npm install...
-  echo.
-  call npm install
-  if errorlevel 1 (
-    echo.
-    echo [錯誤] npm install 失敗，請確認 Node.js 與網路。
-    pause
-    exit /b 1
-  )
-  echo.
-)
-
+set "INSPECT=%~1"
 if /i "%~1"=="inspector" (
-  set "NEU_ARGS=run -- --window-enable-inspector"
-  echo 啟動桌面應用程式（附開發者工具）...
+  echo Starting desktop app with developer tools...
 ) else (
-  set "NEU_ARGS=run"
-  echo 啟動桌面應用程式...
-  echo 提示：加參數 inspector 可開啟開發者工具，例如 scripts\start.bat inspector
+  echo Starting desktop app...
+  echo Tip: pass the inspector argument to open developer tools, e.g. scripts\start.bat inspector
 )
 echo.
 
-rem neu run 在 app 關閉後不會自己結束（Vite 續跑），所以背景啟動，這裡等 app 關掉再收尾。
-rem 直接跑本地 CLI 而不經 npx：少一層行程，kill.bat 的判準才涵蓋整條鏈。
-start "" /b node "node_modules\@neutralinojs\neu\bin\neu.js" %NEU_ARGS%
-
-rem 等 app 出現（最多 60 秒，每輪 tasklist 間隔約 1 秒），出現後再等它被關掉
-set /a TICKS=0
-:wait_launch
-ping -n 2 127.0.0.1 >nul
-tasklist /fi "imagename eq neutralino-win_x64.exe" 2>nul | find /i "neutralino-win_x64.exe" >nul
-if not errorlevel 1 goto wait_close
-set /a TICKS+=1
-if %TICKS% lss 60 goto wait_launch
-
-echo.
-echo [錯誤] 應用程式沒有啟動（或啟動後立即結束），請看上方訊息。
+rem Clear leftovers from an earlier crash so this run starts clean.
 call "%~dp0kill.bat" <nul >nul
-pause
-exit /b 1
 
-:wait_close
-ping -n 2 127.0.0.1 >nul
-tasklist /fi "imagename eq neutralino-win_x64.exe" 2>nul | find /i "neutralino-win_x64.exe" >nul
-if not errorlevel 1 goto wait_close
-
-echo.
-echo 應用程式已結束，收掉 neu run 與 Vite...
+rem The PowerShell launcher is stored below the PSBEGIN label of this file.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=[IO.File]::ReadAllText('%~f0'); iex $s.Substring($s.LastIndexOf(':PSBEGIN')+8)"
+set "RC=%ERRORLEVEL%"
 call "%~dp0kill.bat" <nul >nul
-exit /b 0
+if not "%RC%"=="0" pause
+exit /b %RC%
+
+:PSBEGIN
+$ErrorActionPreference = 'Stop'
+
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+[StructLayout(LayoutKind.Sequential)]
+public struct JobBasicLimit {
+    public long PerProcessUserTimeLimit;
+    public long PerJobUserTimeLimit;
+    public uint LimitFlags;
+    public UIntPtr MinimumWorkingSetSize;
+    public UIntPtr MaximumWorkingSetSize;
+    public uint ActiveProcessLimit;
+    public UIntPtr Affinity;
+    public uint PriorityClass;
+    public uint SchedulingClass;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct JobIoCounters {
+    public ulong ReadOperationCount, WriteOperationCount, OtherOperationCount;
+    public ulong ReadTransferCount, WriteTransferCount, OtherTransferCount;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct JobExtendedLimit {
+    public JobBasicLimit Basic;
+    public JobIoCounters Io;
+    public UIntPtr ProcessMemoryLimit;
+    public UIntPtr JobMemoryLimit;
+    public UIntPtr PeakProcessMemoryUsed;
+    public UIntPtr PeakJobMemoryUsed;
+}
+
+public static class NativeJob {
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr CreateJobObject(IntPtr attributes, string name);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool SetInformationJobObject(IntPtr job, int infoClass, IntPtr info, uint length);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool AssignProcessToJobObject(IntPtr job, IntPtr process);
+}
+'@
+
+# Closing this PowerShell process (exit, console close, Ctrl+C) closes the job handle, which kills the whole tree.
+$job = [NativeJob]::CreateJobObject([IntPtr]::Zero, $null)
+if ($job -eq [IntPtr]::Zero) { throw "CreateJobObject failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
+
+$basic = New-Object JobBasicLimit
+$basic.LimitFlags = 0x2000
+$ext = New-Object JobExtendedLimit
+$ext.Basic = $basic
+$size = [Runtime.InteropServices.Marshal]::SizeOf([type]'JobExtendedLimit')
+$ptr = [Runtime.InteropServices.Marshal]::AllocHGlobal($size)
+[Runtime.InteropServices.Marshal]::StructureToPtr($ext, $ptr, $false)
+$ok = [NativeJob]::SetInformationJobObject($job, 9, $ptr, [uint32]$size)
+[Runtime.InteropServices.Marshal]::FreeHGlobal($ptr)
+if (-not $ok) { throw "SetInformationJobObject failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
+
+$neuArgs = @('node_modules\@neutralinojs\neu\bin\neu.js', 'run')
+if ($env:INSPECT -eq 'inspector') { $neuArgs += @('--', '--window-enable-inspector') }
+$proc = Start-Process -FilePath 'node' -ArgumentList $neuArgs -NoNewWindow -PassThru
+if (-not [NativeJob]::AssignProcessToJobObject($job, $proc.Handle)) { throw "AssignProcessToJobObject failed: $([Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
+
+$appName = 'neutralino-win_x64'
+$deadline = (Get-Date).AddSeconds(60)
+while (-not (Get-Process -Name $appName -ErrorAction SilentlyContinue)) {
+    if ($proc.HasExited -or (Get-Date) -gt $deadline) {
+        Write-Host ''
+        Write-Host '[ERROR] The app did not start (or exited right away). See the messages above.'
+        exit 1
+    }
+    Start-Sleep -Milliseconds 500
+}
+while (Get-Process -Name $appName -ErrorAction SilentlyContinue) { Start-Sleep -Milliseconds 500 }
+
+Write-Host ''
+Write-Host 'App closed. Stopping neu run and Vite...'
+exit 0

@@ -5,18 +5,20 @@ node_modules/
 build/
 dist/
 
+# Neutralino 框架執行檔（scripts\prepare.bat 下載）
+bin/
+
 # Neutralino 執行期
 .storage/
-.tmp/
 *.neu
+.tmp
 
 # 日誌
 logs/
 *.log
 
 # 個人資料
-config/portfolio.json
-config/symbols.json
+config/
 
 # 編輯器
 .vscode/
