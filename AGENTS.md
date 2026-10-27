@@ -15,7 +15,6 @@
 | `src/domain/` | 模型與計算。**零依賴**，不得 import `services/` 或 `ui/`，不得出現任何報價來源的欄位名 |
 | `src/services/` | 報價、儲存、對照表、日誌。可 import `domain/`，不得 import `ui/` |
 | `src/ui/` | 表格、編輯控制、狀態列、主題。可 import 下層，不得被下層 import |
-| `config/` | 舊版資料來源，僅供首次啟動遷移讀取（ADR-0029）。執行期資料位於 `%APPDATA%\stock-portfolio\`。**不得在此放 Neutralino 設定** |
 | `logs/` | 只寫 `app.log`，由 `src/services/logger.ts` 寫入。框架的 `neutralinojs.log` 已關閉（ADR-0023） |
 | `resources/` | `appIcon.png`、`favicon.ico`（`documentRoot` 是 `/build/`，webview 會要 `/build/favicon.ico`）與字型檔。不放圖片素材 |
 | `scripts/` | 雙擊用的便利腳本：`start.bat`（啟動，`inspector` 參數附開發者工具）、`release.bat`（打包）、`kill.bat`（清除殘留的專案程序；`start.bat` 啟動前後呼叫）、`prepare.bat`（前置檢查：缺框架執行檔時依 `binaryVersion` 下載，缺 `node_modules\` 時執行 `npm install`；由 `start.bat` 與 `release.bat` 呼叫）。一律 `cd /d "%~dp0.."` 切到專案根目錄再執行 |

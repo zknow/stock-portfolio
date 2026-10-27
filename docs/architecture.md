@@ -67,7 +67,7 @@ Neutralino 的設定檔 `neutralino.config.json` **必須位於專案根目錄**
 | `quote/MisProvider.ts` | 組 `ex_ch` 批次字串（固定附加 `tse_t00.tw`）、呼叫 MIS、解析回應、現價解析順序（`trade.z` → `z` → 當日無成交）、壞代號判定（`c === ""`）、正規化為 `Quote` 與 `MarketIndex` |
 | `quote/YahooProvider.ts` | 代號轉 `.TW` / `.TWO`、解析 `v8/chart`、正規化為 `Quote`；另以 `^TWII` 取得加權指數 |
 | `symbolTable.ts` | 抓取並合併兩個官方端點、讀寫 `%APPDATA%\stock-portfolio\symbols.json`、代號查詢 |
-| `storage.ts` | 讀寫 `%APPDATA%\stock-portfolio\portfolio.json`、首次啟動從 `config/` 複製舊檔（ADR-0029）、`schemaVersion` 遷移 |
+| `storage.ts` | 讀寫 `%APPDATA%\stock-portfolio\portfolio.json`、`schemaVersion` 遷移 |
 | `logger.ts` | 寫入 `logs/app.log`，只記異常與狀態轉換 |
 
 ### 3.3 ui
@@ -378,4 +378,4 @@ Vite 沒有官方模板（`neutralinojs/neutralinojs-vite-template` 已 404）�
 | [ADR-0026](adr/ADR-0026.md) | `neu run` 在 Job Object 中執行，程序樹隨 `start.bat` 的 PowerShell 程序結束而收掉（檔案位置由 ADR-0027 取代） |
 | [ADR-0027](adr/ADR-0027.md) | Job Object 啟動程式內嵌於 `start.bat`，不再使用 `run-app.ps1` |
 | [ADR-0028](adr/ADR-0028.md) | 非交易時段首抓沒取得報價時改為最多 6 次重試（取代 ADR-0014 的一次重試） |
-| [ADR-0029](adr/ADR-0029.md) | 持股與對照表改存 `%APPDATA%\stock-portfolio\`，首次啟動從 `config/` 複製 |
+| [ADR-0029](adr/ADR-0029.md) | 持股與對照表改存 `%APPDATA%\stock-portfolio\` |

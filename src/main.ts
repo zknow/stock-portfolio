@@ -7,9 +7,9 @@ import { isValidCost, isValidShares } from './domain/validate'
 import { log } from './services/logger'
 import { createQuoteService } from './services/quote/QuoteService'
 import type { QuoteService, QuoteStatus } from './services/quote/QuoteService'
-import { PORTFOLIO_FILE, defaultPortfolio, load, migrateLegacyFile, save } from './services/storage'
+import { defaultPortfolio, load, save } from './services/storage'
 import type { PortfolioFile } from './services/storage'
-import { SYMBOL_FILE, emptyTable, ensureFresh, lookup as lookupSymbol } from './services/symbolTable'
+import { emptyTable, ensureFresh, lookup as lookupSymbol } from './services/symbolTable'
 import type { SymbolTable } from './services/symbolTable'
 import { createEditControls, parseNumber } from './ui/EditControls'
 import type { EditControls, EditMode } from './ui/EditControls'
@@ -360,8 +360,6 @@ async function main(): Promise<void> {
 
   buildShell()
 
-  await migrateLegacyFile(PORTFOLIO_FILE)
-  await migrateLegacyFile(SYMBOL_FILE)
   const loaded = await load()
   portfolio = loaded.file
   loadError = loaded.error
